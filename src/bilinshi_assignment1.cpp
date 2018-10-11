@@ -22,9 +22,13 @@
  */
 #include <iostream>
 #include <stdio.h>
+#include <cstring>
+
 
 #include "../include/global.h"
 #include "../include/logger.h"
+#include "../include/Server.h"
+#include "../include/Client.h"
 
 using namespace std;
 
@@ -38,12 +42,24 @@ using namespace std;
 int main(int argc, char **argv)
 {
 	/*Init. Logger*/
-	cse4589_init_log(argv[2]);
+	// cse4589_init_log(argv[2]);
 
 	/* Clear LOGFILE*/
     fclose(fopen(LOGFILE, "w"));
 
 	/*Start Here*/
-	
+	if(argc != 3){
+		
+	}else{
+		char* type = argv[1];
+		int port = atoi(argv[2]);
+		if(strcmp(type, "c") == 0){
+			Client client(port);
+			client.Run();
+		}else if (strcmp(type, "s") == 0){
+			Server server(port);
+			server.Run();
+		}
+	}
 	return 0;
 }
