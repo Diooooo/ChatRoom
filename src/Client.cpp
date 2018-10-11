@@ -3,15 +3,15 @@
 #include <map>
 
 #include "../include/Client.h"
-
+#include "../include/common.h"
 using namespace std;
 
 Client::Client(int portNumber) {
     port = portNumber;
 
     //get hostname and ip address
-    hostname = string(GetHostname());
-    ip = string(GetIP());
+    hostname = GetHostname();
+    ip = GetIP();
     struct info self;
     self.hostname = (char*)hostname.data();
     self.ip = (char*)ip.data();
@@ -102,7 +102,6 @@ void Client::Run() {
             char *p;
             p = strtok((char*)cmdLine.data(), sep);
             char* cmd = p;
-
             //read other params
             // while (p)
             // {
