@@ -12,12 +12,19 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#include <vector>
+#include <algorithm>
+#include <functional>
+
+#include "../include/logger.h"
+#include "../include/global.h"
+#include "../include/common.h"
 
 #define TRUE 1
 #define MSG_SIZE 256
 #define BUFFER_SIZE 256
 #define MAXLINE 4096
-
+#define MAXCMD 500
 using namespace std;
 
 class Client
@@ -25,7 +32,8 @@ class Client
   public:
     string ip;
     int port;
-    map<string, int> list;
+    string hostname;
+    vector<info> list;
 
     Client(int portNumber);
 
