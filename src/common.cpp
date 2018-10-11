@@ -13,12 +13,12 @@
 #include "../include/common.h"
 
 #define DNS_ADDR "8.8.8.8"
-#define DNS_PORT 11451
+#define DNS_PORT 53
 #define MAXHOST 255
 
 using namespace std;
 
-char *GetIP() {
+string GetIP() {
     char *ip;
     int fd;
     struct sockaddr_in servaddr;
@@ -41,11 +41,17 @@ char *GetIP() {
     getsockname(fd, (struct sockaddr*)&localaddr, &l);
     ip = inet_ntoa(localaddr.sin_addr);
     close(fd);
-    return ip;
+    printf("%s\n", ip);
+    return string(ip);
 };
 
-char *GetHostname() {
+string GetHostname() {
     char hostname[MAXHOST];
-    gethostname(hostname, sizeof(hostname));
-    return hostname;
+    int hostreturn = gethostname(hostname, sizeof(hostname));
+    if(hostreturn ==-1){
+        perror("get host name error");
+    }else{
+        printf("%s \n", hostname);
+    }
+    return string(hostname);
 };
