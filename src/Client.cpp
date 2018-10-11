@@ -10,10 +10,11 @@ Client::Client(int portNumber) {
     port = portNumber;
 
     //get hostname and ip address
+    hostname = string(GetHostname());
     ip = string(GetIP());
     struct info self;
-    self.hostname = hostname.c_str();
-    self.ip = ip.c_str();
+    self.hostname = (char*)hostname.data();
+    self.ip = (char*)ip.data();
     self.port = port;
     list.push_back(self);
 }
@@ -45,7 +46,7 @@ void Client::List() {
     char *cmd = "LIST";
     cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
     for (int i = 0; i < length; i++) {
-        cse4589_print_and_log(("%-5d%-35s%-20s%-8d\n", i + 1, list[i].hostname, list[i].ip, list[i].port));
+        cse4589_print_and_log("%-5d%-35s%-20s%-8d\n", i + 1, list[i].hostname, list[i].ip, list[i].port);
     }
     cse4589_print_and_log("[%s:END]\n", cmd);
 }
@@ -101,7 +102,7 @@ void Client::Run() {
             char *p;
             p = strtok((char*)cmdLine.data(), sep);
             char* cmd = p;
-            char** params;
+
             //read other params
             // while (p)
             // {
