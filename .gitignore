@@ -1,3 +1,6 @@
 /.vscode
 /object
 assignment1
+/.idea
+CMakeLists.txt
+/cmake-build-debug
