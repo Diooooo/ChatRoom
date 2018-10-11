@@ -92,17 +92,21 @@ void Client::SendFile(string ip, string filePath) {
 
 void Client::Run() {
     while (1) {
-        cout <<
-             char * cmd = (char *) malloc(sizeof(char) * MAXCMD);
-
-        memset(cmd, '\0', MAXCMD);
-        if (fgets(cmd, MAXCMD - 1, stdin) == NULL) {
+        string cmdLine;
+        getline(cin, cmdLine);
+        if (cmdLine.size() == 0) {
             exit(-1);
         } else {
-            int len = strlen(cmd);
-            if (cmd[len - 1] == '\n') {
-                cmd[len - 1] = '\0';
-            }
+            const char *sep = " ";
+            char *p;
+            p = strtok((char*)cmdLine.data(), sep);
+            char* cmd = p;
+            char** params;
+            //read other params
+            // while (p)
+            // {
+            //     p = strtok(NULL, sep);
+            // }
             if (strcmp(cmd, "AUTHOR") == 0) {
                 Author();
             } else if (strcmp(cmd, "IP") == 0) {
