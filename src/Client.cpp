@@ -4,17 +4,19 @@
 
 #include "../include/Client.h"
 #include "../include/common.h"
+
 using namespace std;
 
 Client::Client(int portNumber) {
     port = portNumber;
-
+    clientfd = 0;
+    status = LOGOUT;
     //get hostname and ip address
     hostname = GetHostname();
     ip = GetIP();
     struct info self;
-    self.hostname = (char*)hostname.data();
-    self.ip = (char*)ip.data();
+    self.hostname = (char *) hostname.data();
+    self.ip = (char *) ip.data();
     self.port = port;
     list.push_back(self);
 }
@@ -51,15 +53,65 @@ void Client::List() {
     cse4589_print_and_log("[%s:END]\n", cmd);
 }
 
-void Client::Login(string ip, int port) {
+void Client::Login(string ip, int serverPort) {
+    if (clientfd == 0) {
+        clientfd = ConnectToHost((char *) ip.data(), serverPort);
+    } else {
+        char *msg = "LOGIN:NULL";
+        if (send(clientfd, msg, strlen(msg), 0)) {
+            cout << "Update Client Status--login" << endl;
+        }
+    }
+    while (1) {
+        char *buffer = (char *) malloc(sizeof(char) * BUFFER_SIZE);
+        memset(buffer, '\0', BUFFER_SIZE);
+
+        if (recv(clientfd, buffer, BUFFER_SIZE, 0) >= 0) {
+            if (strstr(buffer, "List")) {
+                //update list
+            } else if (strstr(buffer, "Msg")) {
+                //call Receive()
+            } else if (strstr(buffer, "Done")) {
+                break;
+            } else {
+                perror("Unexpected message");
+                break;
+            }
+        }
+    }
+    char *cmd = "LOGIN";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    cse4589_print_and_log("[%s:END]\n", cmd);
+
 
 }
 
 void Client::Refresh() {
+    char *msg = "REFRESH:NULL";
+    if (send(clientfd, msg, strlen(msg), 0)) {
+        cout << "Refresh online clients" << endl;
+    }
+    while (1) {
+        char *buffer = (char *) malloc(sizeof(char) * BUFFER_SIZE);
+        memset(buffer, '\0', BUFFER_SIZE);
 
+        if (recv(clientfd, buffer, BUFFER_SIZE, 0) >= 0) {
+            if (strstr(buffer, "List")) {
+                //update list
+            } else if (strstr(buffer, "Done")) {
+                break;
+            } else {
+                perror("Unexpected message");
+                break;
+            }
+        }
+    }
+    char *cmd = "REFRESH";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    cse4589_print_and_log("[%s:END]\n", cmd);
 }
 
-void Client::Send(string ip, int port) {
+void Client::Send(string ip, int clientPort) {
 
 }
 
@@ -76,15 +128,30 @@ void Client::Unblock(string ip) {
 }
 
 void Client::Logout() {
-
+    char *msg = "LOGOUT:NULL";
+    if (send(clientfd, msg, strlen(msg), 0)) {
+        cout << "Update Client Status--logout" << endl;
+    }
+    char *cmd = "LOGOUT";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    cse4589_print_and_log("[%s:END]\n", cmd);
 }
 
 void Client::Exit() {
-
+    if (status == LOGIN) {
+        close(clientfd);
+    }
+    char *cmd = "EXIT";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    cse4589_print_and_log("[%s:END]\n", cmd);
+    exit(0);
 }
 
-void Client::Received() {
-
+void Client::Received(string ip, string msg) {
+    char *cmd = "RECEIVED";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    cse4589_print_and_log("msg from:%s\n[msg]:%s\n", ip.c_str(), msg.c_str());
+    cse4589_print_and_log("[%s:END]\n", cmd);
 }
 
 void Client::SendFile(string ip, string filePath) {
@@ -96,64 +163,54 @@ void Client::Run() {
         string cmdLine;
         getline(cin, cmdLine);
         if (cmdLine.size() == 0) {
-            exit(-1);
+            exit(1);
         } else {
             const char *sep = " ";
             char *p;
-            p = strtok((char*)cmdLine.data(), sep);
-            char* cmd = p;
+            p = strtok((char *) cmdLine.data(), sep);
+            char *cmd = p;
+            vector<char *> params;
             //read other params
-            // while (p)
-            // {
-            //     p = strtok(NULL, sep);
-            // }
-            if (strcmp(cmd, "AUTHOR") == 0) {
-                Author();
-            } else if (strcmp(cmd, "IP") == 0) {
-                Ip();
-            } else if (strcmp(cmd, "PORT") == 0) {
-                Port();
-            } else if (strcmp(cmd, "LIST") == 0) {
-                List();
+            while (p) {
+                params.push_back(p);
+                p = strtok(NULL, sep);
+            }
+            if (status == LOGOUT) {
+                if (strcmp(cmd, "AUTHOR") == 0) {
+                    Author();
+                } else if (strcmp(cmd, "IP") == 0) {
+                    Ip();
+                } else if (strcmp(cmd, "PORT") == 0) {
+                    Port();
+                } else if (strcmp(cmd, "LOGIN") == 0) {
+                    if (params.size() <= 2) {
+                        cout << "Error Input" << endl;
+                    }
+                    Login(string(params[1]), atoi(params[2]))
+                } else if (strcmp(cmd, "EXIT") == 0) {
+                    Exit();
+                } else {
+                    perror("Unexpected command");
+                }
+            } else {
+                if (strcmp(cmd, "LIST") == 0) {
+                    List();
+                } else if (strcmp(cmd, "REFRESH") == 0) {
+                    Refresh();
+                } else if (strcmp(cmd, "SEND") == 0) {
+
+                } else if (strcmp(cmd, "BOARDCAST") == 0) {
+
+                } else if (strcmp(cmd, "BLOCK") == 0) {
+
+                } else if (strcmp(cmd, "UNBLOCK") == 0) {
+
+                } else if (strcmp(cmd, "LOGOUT") == 0) {
+
+                } else {
+                    perror("Unexpected command");
+                }
             }
         }
     }
-    int sockfd, n, rec_len;
-    char recvline[4096], sendline[4096];
-    char buf[MAXLINE];
-    struct sockaddr_in servaddr;
-
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        printf("create socket error: %s(errno: %d)\n", strerror(errno), errno);
-        exit(0);
-    }
-    memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(port);
-    if (inet_pton(AF_INET, "127.0.0.1", &servaddr.sin_addr) <= 0) {
-        printf("inet_pton error for %s\n", "127.0.0.1");
-        exit(0);
-    }
-    if (connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
-        printf("connect error: %s(errno: %d)\n", strerror(errno), errno);
-        exit(0);
-    }
-    while (1) {
-        memset(buf, 0, sizeof(buf));
-        memset(sendline, 0, sizeof(sendline));
-        printf("Send massage to server: ");
-        fgets(sendline, 4096, stdin);
-        //send
-        send(sockfd, sendline, strlen(sendline), 0);
-        if (strcmp(sendline, "bye") == 0) {
-            printf("Exit\n");
-            break;
-        }
-        //receive
-        printf("Waiting server send message now...\n");
-        recv(sockfd, buf, MAXLINE, 0);
-        printf("Received message: %s", buf);
-    }
-    close(sockfd);
-    exit(0);
 }

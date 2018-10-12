@@ -9,22 +9,22 @@ struct info {
     char *ip;
     int port;
 
-    bool operator<(const info &info1) const
-
-    {
+    bool operator<(const info &info1) const {
 
         return port < info1.port;
 
     }
 
 
-    bool operator>(const info &info1) const
-
-    {
+    bool operator>(const info &info1) const {
 
         return port > info1.port;
 
     }
 };
 
+enum clientStatus {
+    LOGIN,
+    LOGOUT
+};
 #endif
