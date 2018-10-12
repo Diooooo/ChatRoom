@@ -1,13 +1,25 @@
+#include <string>
+#include <map>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/socket.h>
+#include <strings.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
-#include <string>
-#include <map>
+#include <vector>
+#include <algorithm>
+#include <functional>
+
+#include "../include/logger.h"
+#include "../include/global.h"
+#include "../include/common.h"
+
 #define DEFAULT_PORT 8000
 #define MAXLINE 4096
 
@@ -19,21 +31,39 @@
 
 using namespace std;
 
-class Server
-{
-  public:
+class Server {
+public:
     string ip;
+    string hostname;
     int port;
-    map<string, int> list;
+    int server_socket;
+    int head_socket;
+    int selret;
+    int sock_index;
+    socklen_t caddr_len;
+    struct sockaddr_in server_addr;
+    struct sockaddr_in client_addr;
+    fd_set master_list;
+    fd_set watch_list;
+
+    vector<struct info> clientList;
+    map<string, vector<struct info> > blockList;
 
     Server(int port);
 
     void Author();
+
     void Ip();
+
     void Port();
+
     void List();
+
     void Statistic();
+
     void Blocked(string ip);
+
     void Relay();
+
     void Run();
 };
