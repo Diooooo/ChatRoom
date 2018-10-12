@@ -37,7 +37,8 @@ class Server
     string hostname;
     int port;
     int server_socket, head_socket, selret, sock_index;
-    int fdaccept = 0, caddr_len;
+    int fdaccept = 0;
+    socklen_t caddr_len;
     struct sockaddr_in server_addr, client_addr;
     fd_set master_list, watch_list;
 
