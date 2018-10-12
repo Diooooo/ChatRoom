@@ -24,6 +24,7 @@
 #define MSG_SIZE 256
 #define BUFFER_SIZE 256
 #define MAXCMD 500
+#define STDIN 0
 using namespace std;
 
 class Client {
@@ -50,7 +51,7 @@ public:
 
     void Refresh();
 
-    void Send(string ip, int clientPort, char *msg);
+    void Send(string ip, int clientPort, char *message);
 
     void Boardcast(string message);
 
