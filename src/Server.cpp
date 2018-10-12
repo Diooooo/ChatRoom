@@ -175,7 +175,7 @@ void Server::Run() {
                         string clientHostname = GetClientHostname(clientIp);
                         struct info newClient;
                         newClient.hostname = (char *) clientHostname.data();
-                        newClient.ip = (char *) clientIp.data();
+                        newClient.ip = clientIp;
                         newClient.port = clientPort;
                         newClient.send = 0;
                         newClient.receive = 0;
@@ -191,9 +191,8 @@ void Server::Run() {
                                 strcat(msg, clientList[i].hostname);
                                 strcat(msg, ",");
                                 strcat(msg, clientList[i].ip);
-                                strcat(msg, ",");
                                 char portString[10];
-                                itoa(clientList[i].port, portString, 10); //radix: decimal
+                                sprintf(portString, "%d", clientList[i].port);
                                 strcat(msg, portString);
                                 if (send(fdaccept, msg, strlen(msg), 0)) {
                                     cout << "Send online client: " << i + 1 << endl;
