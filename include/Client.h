@@ -34,7 +34,9 @@ public:
     vector<info> list;
     int clientfd;
     enum clientStatus status;
+
     struct sockaddr_in client_addr;
+
 
     Client(int portNumber);
 
