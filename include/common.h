@@ -13,6 +13,8 @@ std::string GetHostname();
 
 int ConnectToHost(char *server_ip, int server_port);
 
-void CommandFail(char* cmd);
+void CommandFail(char *cmd);
+
+std::string GetClientHostname(char *clientIp);
 
 #endif //BILINSHI_COMMON_H

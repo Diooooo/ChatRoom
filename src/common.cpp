@@ -77,3 +77,11 @@ void CommandFail(char *cmd) {
     cse4589_print_and_log("[%s:ERROR]\n", cmd);
     cse4589_print_and_log("[%s:END]\n", cmd);
 }
+
+string GetClientHostname(char *clientIp) {
+    struct hostent *he;
+    struct in_addr ipv4addr;
+    inet_pton(AF_INET, clientIp, &ipv4addr);
+    he = gethostbyaddr(&ipv4addr, sizeof(ipv4addr), AF_INET);
+    return string(he->h_name);
+}
