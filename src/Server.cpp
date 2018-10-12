@@ -9,18 +9,33 @@ using namespace std;
 Server::Server(int portNumber)
 {
     port = portNumber;
+    hostname = GetHostname();
+    ip = GetIP();
+
 }
 
 void Server::Author()
 {
+    char *cmd = "AUTHOR";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    cse4589_print_and_log("I, %s, have read and understood the course academic integrity policy.\n", "bilinshi");
+    cse4589_print_and_log("[%s:END]\n", cmd);
 }
 
 void Server::Ip()
 {
+    char *cmd = "IP";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    cse4589_print_and_log("IP:%s\n", ip.c_str());
+    cse4589_print_and_log("[%s:END]\n", cmd);
 }
 
 void Server::Port()
 {
+    char *cmd = "PORT";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    cse4589_print_and_log("PORT:%d\n", port);
+    cse4589_print_and_log("[%s:END]\n", cmd);
 }
 
 void Server::List()
@@ -41,57 +56,113 @@ void Server::Relay()
 
 void Server::Run()
 {
-    int socket_fd, connect_fd;
-    struct sockaddr_in servaddr;
-    char buff[4096];
-    int n;
-    char sendline[4096];
-    //初始化Socket
-    if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-    {
-        printf("create socket error: %s(errno: %d)\n", strerror(errno), errno);
-        exit(0);
-    }
-    //初始化
-    memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY); //IP地址设置成INADDR_ANY,让系统自动获取本机的IP地址。
-    servaddr.sin_port = htons(port);      //设置的端口为DEFAULT_PORT
+    server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_socket < 0)
+        printf("Create socket failed!");
+    bzero(&server_addr, sizeof(server_addr));
 
-    //将本地地址绑定到所创建的套接字上
-    if (bind(socket_fd, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1)
-    {
-        printf("bind socket error: %s(errno: %d)\n", strerror(errno), errno);
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr((char*)ip.data());
+    server_addr.sin_port = htons(port);
+
+    if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        printf("Bind failed!");
         exit(0);
-    }
-    //开始监听是否有客户端连接
-    if (listen(socket_fd, 10) == -1)
-    {
-        printf("listen socket error: %s(errno: %d)\n", strerror(errno), errno);
-        exit(0);
-    }
-    if ((connect_fd = accept(socket_fd, (struct sockaddr *)NULL, NULL)) < 0)
-    {
-        printf("accept socket error: %s(errno: %d)", strerror(errno), errno);
     }
 
-    while (1)
-    {
-        memset(buff, 0, sizeof(buff));
-        printf("Waiting client send message now...\n");
-        //接受客户端传过来的数据
-        n = recv(connect_fd, buff, MAXLINE, 0);
-        if (strcmp(buff, "bye") == 0)
-        {
-            printf("Exit\n");
-            break;
+    if (listen(server_socket, 10) < 0) {
+        printf ("Listen socket error!");
+    }
+
+    FD_ZERO(&master_list);
+    FD_ZERO(&watch_list);
+
+    FD_SET(server_socket, &master_list);
+
+    FD_SET(STDIN, &master_list);
+
+    head_socket = server_socket;
+
+    while (1){
+        memcpy(&watch_list, &master_list, sizeof(master_list));
+
+        selret = select(head_socket + 1, &watch_list, NULL, NULL, NULL);
+        if (selret < 0)
+            printf("Select error!");
+
+        if (selret > 0) {
+            //
+            for (sock_index = 0; sock_index <= head_socket; sock_index++){
+
+                if (FD_ISSET(sock_index, &watch_list)){
+                    if(sock_index == 0){
+                        string cmdLine;
+                        getline(cin, cmdLine);
+                        if (cmdLine.size()==0) {
+                            exit(-1);
+                        }
+                        else {
+                            char* cmd = strtok((char*)cmdLine.data(), " ");
+                            if (strcmp(cmd, "AUTHOR") == 0) {
+                                Author();
+                            } else if (strcmp(cmd, "IP") == 0) {
+                                Ip();
+                            } else if (strcmp(cmd, "PORT") == 0) {
+                                Port();
+                            } else if (strcmp(cmd, "LIST") == 0) {
+                                List();
+                            }
+
+                        }
+                    }
+                    else if(sock_index == server_socket){
+                        caddr_len = sizeof(client_addr);
+                        fdaccept = accept(server_socket, (struct sockaddr *)&client_addr, &caddr_len);
+                        if(fdaccept < 0)
+                            perror("Accept failed.");
+
+                        printf("\nRemote Host connected!\n");
+
+                        /* Add to watched socket list */
+                        FD_SET(fdaccept, &master_list);
+                        if(fdaccept > head_socket)
+                            head_socket = fdaccept;
+                    }
+                    /* Read from existing clients */
+                    else{
+                        /* Initialize buffer to receieve response */
+                        char *buffer = (char*) malloc(sizeof(char)*BUFFER_SIZE);
+                        memset(buffer, '\0', BUFFER_SIZE);
+
+                        if(recv(sock_index, buffer, BUFFER_SIZE, 0) <= 0){
+                            close(sock_index);
+                            printf("Remote Host terminated connection!\n");
+
+                            /* Remove from watched list */
+                            FD_CLR(sock_index, &master_list);
+                        }
+                        else {
+                            //Process incoming data from existing clients here ...
+
+                            printf("\nClient sent me: %s\n", buffer);
+                            printf("ECHOing it back to the remote host ... ");
+                            if(send(sock_index, buffer, strlen(buffer), 0) == strlen(buffer))
+                                printf("Done!\n");
+                            fflush(stdout);
+                        }
+
+                        free(buffer);
+                    }
+
+                }
+
+
+            }
+
         }
-        buff[n] = '\0';
-        printf("recv msg from client: %s", buff);
-        printf("send message to client: ");
-        fgets(sendline, 4096, stdin);
-        send(connect_fd, sendline, strlen(sendline), 0);
+
     }
-    close(connect_fd);
-    close(socket_fd);
+
+
+
 }
