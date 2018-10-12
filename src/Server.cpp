@@ -115,6 +115,44 @@ void Server::Run()
 
                         }
                     }
+                    else if(sock_index == server_socket){
+                        caddr_len = sizeof(client_addr);
+                        fdaccept = accept(server_socket, (struct sockaddr *)&client_addr, &caddr_len);
+                        if(fdaccept < 0)
+                            perror("Accept failed.");
+
+                        printf("\nRemote Host connected!\n");
+
+                        /* Add to watched socket list */
+                        FD_SET(fdaccept, &master_list);
+                        if(fdaccept > head_socket)
+                            head_socket = fdaccept;
+                    }
+                    /* Read from existing clients */
+                    else{
+                        /* Initialize buffer to receieve response */
+                        char *buffer = (char*) malloc(sizeof(char)*BUFFER_SIZE);
+                        memset(buffer, '\0', BUFFER_SIZE);
+
+                        if(recv(sock_index, buffer, BUFFER_SIZE, 0) <= 0){
+                            close(sock_index);
+                            printf("Remote Host terminated connection!\n");
+
+                            /* Remove from watched list */
+                            FD_CLR(sock_index, &master_list);
+                        }
+                        else {
+                            //Process incoming data from existing clients here ...
+
+                            printf("\nClient sent me: %s\n", buffer);
+                            printf("ECHOing it back to the remote host ... ");
+                            if(send(sock_index, buffer, strlen(buffer), 0) == strlen(buffer))
+                                printf("Done!\n");
+                            fflush(stdout);
+                        }
+
+                        free(buffer);
+                    }
 
                 }
 
