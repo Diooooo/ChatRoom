@@ -42,7 +42,6 @@ string GetIP() {
     getsockname(fd, (struct sockaddr *) &localaddr, &l);
     ip = inet_ntoa(localaddr.sin_addr);
     close(fd);
-    printf("%s\n", ip);
     return string(ip);
 };
 
@@ -51,8 +50,6 @@ string GetHostname() {
     int hostreturn = gethostname(hostname, sizeof(hostname));
     if (hostreturn == -1) {
         perror("get host name error");
-    } else {
-        printf("%s \n", hostname);
     }
     return string(hostname);
 };
