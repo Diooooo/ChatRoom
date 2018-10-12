@@ -14,11 +14,7 @@ Client::Client(int portNumber) {
     //get hostname and ip address
     hostname = GetHostname();
     ip = GetIP();
-
     bzero(&client_addr, sizeof(client_addr));
-
-   
-
 }
 
 void Client::Author() {
@@ -224,7 +220,7 @@ void Client::Run() {
                 params.push_back(p);
                 p = strtok(NULL, sep);
             }
-
+            cout << cmd << endl;
             if (status == LOGOUT) {
                 if (strcmp(cmd, "AUTHOR") == 0) {
                     Author();
@@ -244,7 +240,7 @@ void Client::Run() {
                     perror("Unexpected command");
                 }
             } else {
-
+                //cout << "cmd"<< cmd << endl;
                 if (strcmp(cmd, "LIST") == 0) {
                     List();
                 } else if (strcmp(cmd, "REFRESH") == 0) {
