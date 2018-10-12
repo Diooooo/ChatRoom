@@ -19,6 +19,7 @@
 #include "../include/logger.h"
 #include "../include/global.h"
 #include "../include/common.h"
+
 #define DEFAULT_PORT 8000
 #define MAXLINE 4096
 
@@ -30,28 +31,39 @@
 
 using namespace std;
 
-class Server
-{
-  public:
+class Server {
+public:
     string ip;
     string hostname;
     int port;
-    int server_socket, head_socket, selret, sock_index;
-    int fdaccept = 0;
+    int server_socket;
+    int head_socket;
+    int selret;
+    int sock_index;
     socklen_t caddr_len;
-    struct sockaddr_in server_addr, client_addr;
-    fd_set master_list, watch_list;
+    struct sockaddr_in server_addr;
+    struct sockaddr_in client_addr;
+    fd_set master_list;
+    fd_set watch_list;
 
-    map<string, int> list;
+    vector<struct info> clientList;
+    map<string, vector<struct info> > blockList;
 
     Server(int port);
 
     void Author();
+
     void Ip();
+
     void Port();
+
     void List();
+
     void Statistic();
+
     void Blocked(string ip);
+
     void Relay();
+
     void Run();
 };
