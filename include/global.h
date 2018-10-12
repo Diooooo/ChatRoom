@@ -3,11 +3,18 @@
 
 #define HOSTNAME_LEN 128
 #define PATH_LEN 256
+enum clientStatus {
+    LOGIN,
+    LOGOUT
+};
 
 struct info {
     char *hostname;
     char *ip;
     int port;
+    enum clientStatus status;
+    int send;
+    int receive;
 
     bool operator<(const info &info1) const {
 
@@ -23,8 +30,9 @@ struct info {
     }
 };
 
-enum clientStatus {
-    LOGIN,
-    LOGOUT
+
+struct blockInfo {
+    char *ip;
+    char *msg;
 };
 #endif
