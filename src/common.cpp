@@ -84,6 +84,4 @@ string GetClientHostname(char *clientIp) {
     inet_pton(AF_INET, clientIp, &ipv4addr);
     he = gethostbyaddr(&ipv4addr, sizeof(ipv4addr), AF_INET);
     return string(he->h_name);
-
 }
-
