@@ -111,20 +111,41 @@ void Client::Refresh() {
     cse4589_print_and_log("[%s:END]\n", cmd);
 }
 
-void Client::Send(string ip, int clientPort) {
+void Client::Send(string ip, int clientPort, char *msg) {
 
 }
 
-void Client::Boardcast(string msg) {
-
+void Client::Boardcast(string message) {
+    char *msg = "BOARDCAST:";
+    strcat(msg, (char *) message.data());
+    if (send(clientfd, msg, strlen(msg), 0)) {
+        cout << "Boardcast to all" << endl;
+    }
+    char *cmd = "BOARDCAST";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    cse4589_print_and_log("[%s:END]\n", cmd);
 }
 
 void Client::Block(string ip) {
-
+    char *msg = "BLOCK:";
+    strcat(msg, (char *) ip.data());
+    if (send(clientfd, msg, strlen(msg), 0)) {
+        cout << "Block ip: " << ip << endl;
+    }
+    char *cmd = "BLOCK";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    cse4589_print_and_log("[%s:END]\n", cmd);
 }
 
 void Client::Unblock(string ip) {
-
+    char *msg = "UNBLOCK:";
+    strcat(msg, (char *) ip.data());
+    if (send(clientfd, msg, strlen(msg), 0)) {
+        cout << "Unblock ip: " << ip << endl;
+    }
+    char *cmd = "UNBLOCK";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    cse4589_print_and_log("[%s:END]\n", cmd);
 }
 
 void Client::Logout() {
@@ -186,7 +207,8 @@ void Client::Run() {
                     if (params.size() <= 2) {
                         cout << "Error Input" << endl;
                     }
-                    Login(string(params[1]), atoi(params[2]))
+                    Login(string(params[1]), atoi(params[2]));
+
                 } else if (strcmp(cmd, "EXIT") == 0) {
                     Exit();
                 } else {

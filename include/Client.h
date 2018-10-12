@@ -26,9 +26,8 @@
 #define MAXCMD 500
 using namespace std;
 
-class Client
-{
-  public:
+class Client {
+public:
     string ip;
     int port;
     string hostname;
@@ -39,18 +38,32 @@ class Client
     Client(int portNumber);
 
     void Author();
+
     void Ip();
+
     void Port();
+
     void List();
+
     void Login(string ip, int serverPort);
+
     void Refresh();
-    void Send(string ip, int clientPort);
-    void Boardcast(string msg);
+
+    void Send(string ip, int clientPort, char *msg);
+
+    void Boardcast(string message);
+
     void Block(string ip);
+
     void Unblock(string ip);
+
     void Logout();
+
     void Exit();
+
     void Received(string ip, string msg);
+
     void SendFile(string ip, string filePath);
+
     void Run();
 };
