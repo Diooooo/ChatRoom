@@ -14,11 +14,11 @@ Client::Client(int portNumber) {
     //get hostname and ip address
     hostname = GetHostname();
     ip = GetIP();
-    struct info self;
-    self.hostname = (char *) hostname.data();
-    self.ip = (char *) ip.data();
-    self.port = port;
-    list.push_back(self);
+
+    bzero(&client_addr, sizeof(client_addr));
+
+   
+
 }
 
 void Client::Author() {
@@ -176,10 +176,38 @@ void Client::Received(string ip, string msg) {
 }
 
 void Client::SendFile(string ip, string filePath) {
+}
 
+
+int Client::ConnectToHost(char *server_ip, int server_port) {
+    int fdsocket, len;
+    struct sockaddr_in remote_server_addr;
+
+    fdsocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (fdsocket < 0)
+        perror("Failed to create socket");
+
+    client_addr.sin_family = AF_INET;
+    client_addr.sin_port =htons(port);
+    client_addr.sin_addr.s_addr = inet_addr((char*)ip.data());
+
+    if (bind(fdsocket, (struct sockaddr *) &client_addr, sizeof(client_addr))< 0){
+        perror("Bind failed!");
+    }
+
+    bzero(&remote_server_addr, sizeof(remote_server_addr));
+    remote_server_addr.sin_family = AF_INET;
+    inet_pton(AF_INET, server_ip, &remote_server_addr.sin_addr);
+    remote_server_addr.sin_port = htons(server_port);
+
+    if (connect(fdsocket, (struct sockaddr *) &remote_server_addr, sizeof(remote_server_addr)) < 0)
+        perror("Connect failed");
+
+    return fdsocket;
 }
 
 void Client::Run() {
+
     while (1) {
         string cmdLine;
         getline(cin, cmdLine);
@@ -196,6 +224,7 @@ void Client::Run() {
                 params.push_back(p);
                 p = strtok(NULL, sep);
             }
+
             if (status == LOGOUT) {
                 if (strcmp(cmd, "AUTHOR") == 0) {
                     Author();
@@ -215,6 +244,7 @@ void Client::Run() {
                     perror("Unexpected command");
                 }
             } else {
+
                 if (strcmp(cmd, "LIST") == 0) {
                     List();
                 } else if (strcmp(cmd, "REFRESH") == 0) {

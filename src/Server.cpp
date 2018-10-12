@@ -166,12 +166,20 @@ void Server::Run() {
 
                         }
                     } else if (sock_index == server_socket) { //new client login
+
                         int fdaccept = accept(server_socket, (struct sockaddr *) &client_addr, &caddr_len);
                         if (fdaccept < 0)
                             perror("Accept failed.");
 
+
+                        
+
                         char *clientIp = inet_ntoa(client_addr.sin_addr);
                         int clientPort = (int) ntohs(client_addr.sin_port);
+                        
+                        char *clientIp = inet_ntoa(client_addr.sin_addr);
+                        int clientPort = (int) ntohs(client_addr.sin_port);
+
                         string clientHostname = GetClientHostname(clientIp);
                         struct info newClient;
                         newClient.hostname = (char *) clientHostname.data();
@@ -185,6 +193,27 @@ void Server::Run() {
 
                         //here complement the response
                         int length = clientList.size();
+
+                        char msg[255];
+                        for (int i = 0; i < length; i++) {
+                            if (clientList[i].status == LOGIN) {
+                                //char msg[255];
+                                strcpy(msg, "List:");
+                                strcat(msg, clientList[i].hostname);
+                                strcat(msg, ",");
+                                strcat(msg, clientList[i].ip);
+                                strcat(msg, ",");
+                                char portString[10];
+                                //cout << clientList[i].port << endl;
+                                sprintf(portString, "%d", clientList[i].port);
+
+                                strcat(msg, portString);
+                                cout << msg << endl;
+                                if (send(fdaccept, msg, strlen(msg), 0)) {
+                                    cout << "Send online client: " << i + 1 << endl;
+                                }
+                                //free(msg);
+
                         for (int i = 0; i < length; i++) {
                             if (clientList[i].status == LOGIN) {
                                 char *msg = "List:";
@@ -198,6 +227,7 @@ void Server::Run() {
                                     cout << "Send online client: " << i + 1 << endl;
                                 }
                                 free(msg);
+
                             }
                         }
                         //then respond relay

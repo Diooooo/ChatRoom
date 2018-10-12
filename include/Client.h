@@ -35,6 +35,9 @@ public:
     int clientfd;
     enum clientStatus status;
 
+    struct sockaddr_in client_addr;
+
+
     Client(int portNumber);
 
     void Author();
@@ -66,4 +69,6 @@ public:
     void SendFile(string ip, string filePath);
 
     void Run();
+    
+    int ConnectToHost(char *server_ip, int server_port);
 };
