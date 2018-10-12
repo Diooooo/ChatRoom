@@ -120,7 +120,7 @@ void Server::Run() {
 
     while (1) {
         memcpy(&watch_list, &master_list, sizeof(master_list));
-
+        bzero(&client_addr, sizeof(client_addr));
         selret = select(head_socket + 1, &watch_list, NULL, NULL, NULL);
         if (selret < 0)
             perror("Select error!");
@@ -135,7 +135,16 @@ void Server::Run() {
                         if (cmdLine.size() == 0) {
                             exit(-1);
                         } else {
-                            char *cmd = strtok((char *) cmdLine.data(), " ");
+                            const char *sep = " ";
+                            char *p;
+                            p = strtok((char *) cmdLine.data(), sep);
+                            char *cmd = p;
+                            vector<char *> params;
+                            //read other params
+                            while (p) {
+                                params.push_back(p);
+                                p = strtok(NULL, sep);
+                            }
                             if (strcmp(cmd, "AUTHOR") == 0) {
                                 Author();
                             } else if (strcmp(cmd, "IP") == 0) {
@@ -147,7 +156,10 @@ void Server::Run() {
                             } else if (strcmp(cmd, "STATISTIC") == 0) {
                                 Statistic();
                             } else if (strcmp(cmd, "BLOCKED") == 0) {
-
+                                if (params.size() <= 1) {
+                                    cout << "Error Input" << endl;
+                                }
+                                Blocked(string(params[1]));
                             } else {
                                 perror("Unexpected command");
                             }
@@ -158,8 +170,45 @@ void Server::Run() {
                         if (fdaccept < 0)
                             perror("Accept failed.");
 
-                        printf("\nRemote Host connected!\n");
+                        char *clientIp = inet_ntoa(client_addr.sin_addr);
+                        int clientPort = (int) ntohs(client_addr.sin_port);
+                        string clientHostname = GetClientHostname(clientIp);
+                        struct info newClient;
+                        newClient.hostname = (char *) clientHostname.data();
+                        newClient.ip = (char *) clientIp.data();
+                        newClient.port = clientPort;
+                        newClient.send = 0;
+                        newClient.receive = 0;
+                        newClient.status = LOGIN;
 
+                        clientList.push_back(newClient);
+
+                        //here complement the response
+                        int length = clientList.size();
+                        for (int i = 0; i < length; i++) {
+                            if (clientList[i].status == LOGIN) {
+                                char *msg = "List:";
+                                strcat(msg, clientList[i].hostname);
+                                strcat(msg, ",");
+                                strcat(msg, clientList[i].ip);
+                                strcat(msg, ",");
+                                char portString[10];
+                                itoa(clientList[i].port, portString, 10); //radix: decimal
+                                strcat(msg, portString);
+                                if (send(fdaccept, msg, strlen(msg), 0)) {
+                                    cout << "Send online client: " << i + 1 << endl;
+                                }
+                                free(msg);
+                            }
+                        }
+                        //then respond relay
+
+
+                        //finally send Done
+                        char *responseDone = "Done";
+                        if (send(fdaccept, responseDone, strlen(responseDone), 0)) {
+                            cout << "Response done" << endl;
+                        }
                         /* Add to watched socket list */
                         FD_SET(fdaccept, &master_list);
                         if (fdaccept > head_socket)
@@ -184,12 +233,22 @@ void Server::Run() {
                                 //update client status
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *clientIp = inet_ntoa(client_addr.sin_addr);
-
+                                int length = clientList.size();
+                                for (int i = 0; i < length; i++) {
+                                    if (strcmp(clientList[i].ip, clientIp) == 0) {
+                                        clientList[i].status = LOGIN;
+                                    }
+                                }
                             } else if (strstr(buffer, "LOGOUT")) {
                                 //update client status
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *clientIp = inet_ntoa(client_addr.sin_addr);
-
+                                int length = clientList.size();
+                                for (int i = 0; i < length; i++) {
+                                    if (strcmp(clientList[i].ip, clientIp) == 0) {
+                                        clientList[i].status = LOGOUT;
+                                    }
+                                }
                             }
                         }
 
