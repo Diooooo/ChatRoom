@@ -321,7 +321,7 @@ void Server::Run() {
                         }
                         strcat(message, responseDone);
                         cout << "generate message: " << message << endl;
-
+                        Send(fdaccept, message);
                         /* Add to watched socket list */
                         FD_SET(fdaccept, &master_list);
                         if (fdaccept > head_socket)
