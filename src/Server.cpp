@@ -538,10 +538,12 @@ void Server::Run() {
                                 blockInfo.ip = blockIp;
 
                                 if (iter != blockList.end()) {
+                                    cout << "First block" << endl;
                                     vector<info> blockClients = iter->second;
 
                                     blockClients.push_back(blockInfo);
                                 } else {
+                                    cout << "block for some times" << endl;
                                     vector<info> blockClients;
                                     blockClients.push_back(blockInfo);
                                     blockList.insert(pair<string, vector<info> >(fromClient, blockClients));
