@@ -68,11 +68,11 @@ public:
 
     void Run();
 
-    char* ResponseList(int sockfd);
+    string ResponseList(int sockfd);
 
-    char* ResponseRelayMsg(int sockfd, string clientIp, int clientPort);
+    string ResponseRelayMsg(int sockfd, string clientIp, int clientPort);
 
-    char* ResponseDone(int sockfd);
+    string ResponseDone(int sockfd);
 
     int FindClient(string clientIp, int clientPort);
 

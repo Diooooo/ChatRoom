@@ -120,7 +120,7 @@ bool Server::Send(int sockfd, char *msg) {
 }
 
 
-char *Server::ResponseList(int sockfd) {
+string Server::ResponseList(int sockfd) {
     int length = clientList.size();
     char msg[BUFFER_SIZE];
     memset(msg, '\0', sizeof(msg));
@@ -144,11 +144,11 @@ char *Server::ResponseList(int sockfd) {
         }
     }
     strcat(msg, "ListEnd\n");
-    return msg;
+    return string(msg);
 }
 
 
-char *Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
+string Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
     map<string, vector<struct relayInfo> >::iterator iter;
     iter = relayList.find(clientIp);
     cout << "S1" << endl;
@@ -175,16 +175,16 @@ char *Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
                 clientList[clientIndex].receive++;
             }
             strcat(msg, "MsgEnd\n");
-            return msg;
+            return string(msg);
         }
     }
-    return NULL;
+    return "";
 
 }
 
-char *Server::ResponseDone(int sockfd) {
+string Server::ResponseDone(int sockfd) {
     char *responseDone = "Done\n";
-    return responseDone;
+    return string(responseDone);
 }
 
 
@@ -298,30 +298,27 @@ void Server::Run() {
                         clientList.push_back(newClient);
                         cout << 3 << endl;
                         //here complement the response
-                        char *listMsg = ResponseList(fdaccept);
+                        string listMsg = ResponseList(fdaccept);
                         //then respond relay
-                        char *relayMsg = ResponseRelayMsg(fdaccept, string(clientIp), clientPort);
+                        string relayMsg = ResponseRelayMsg(fdaccept, string(clientIp), clientPort);
                         //finally send Done
-                        char *responseDone = ResponseDone(fdaccept);
+                        string responseDone = ResponseDone(fdaccept);
 
-//                        string message;
-//                        if (relayMsg == NULL) {
-//                            message = string(listMsg);
-//                            message += string(responseDone);
-//                        } else {
-//                            message = string(listMsg);
-//                            message += string(relayMsg);
-//                            message += string(responseDone);
+                        string message;
+
+                        message = string(listMsg);
+                        message += string(relayMsg);
+                        message += string(responseDone);
+
+                        Send(fdaccept, (char *) message.data());
+//                        char message[BUFFER_SIZE];
+//                        strcpy(message, listMsg);
+//                        if (relayMsg != NULL) {
+//                            strcat(message, relayMsg);
 //                        }
-//                        Send(fdaccept, (char *) message.data());
-                        char message[BUFFER_SIZE];
-                        strcpy(message, listMsg);
-                        if (relayMsg != NULL) {
-                            strcat(message, relayMsg);
-                        }
-                        strcat(message, responseDone);
-                        cout << "generate message: " << message << endl;
-                        Send(fdaccept, message);
+//                        strcat(message, responseDone);
+//                        cout << "generate message: " << message << endl;
+//                        Send(fdaccept, message);
                         /* Add to watched socket list */
                         FD_SET(fdaccept, &master_list);
                         if (fdaccept > head_socket)
@@ -455,7 +452,13 @@ void Server::Run() {
                                 char *blockIp = params[1];
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *fromClient = inet_ntoa(client_addr.sin_addr);
-
+                                map<string, vector<struct info> >::iterator iter;
+                                iter = blockList.find(ip);
+                                if (iter != blockList.end()) {
+                                    vector<info> blockClients = iter->second;
+                                    struct info blockInfo;
+                                    blockInfo.ip = blockIp;
+                                }
                             } else if (strcmp(sign, "UNBLOCK") == 0) {
                                 if (params.size() <= 1) {
                                     perror("Unexpected params");
