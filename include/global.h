@@ -5,7 +5,8 @@
 #define PATH_LEN 256
 enum clientStatus {
     LOGIN,
-    LOGOUT
+    LOGOUT,
+    OFFLINE
 };
 
 struct info {
@@ -15,6 +16,7 @@ struct info {
     enum clientStatus status;
     int send;
     int receive;
+    int socketfd;
 
     bool operator<(const info &info1) const {
 
@@ -31,7 +33,7 @@ struct info {
 };
 
 
-struct blockInfo {
+struct relayInfo {
     char *ip;
     char *msg;
 };
