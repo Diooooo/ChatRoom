@@ -48,9 +48,9 @@ void Server::List() {
     cse4589_print_and_log("[%s:END]\n", cmd);
 }
 
-void Server::Statistic() {
+void Server::Statistics() {
     sort(clientList.begin(), clientList.end());
-    char *cmd = "STATISTIC";
+    char *cmd = "STATISTICS";
     cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
     int length = clientList.size();
     for (int i = 0; i < length; i++) {
@@ -264,8 +264,8 @@ void Server::Run() {
                                 Port();
                             } else if (strcmp(cmd, "LIST") == 0) {
                                 List();
-                            } else if (strcmp(cmd, "STATISTIC") == 0) {
-                                Statistic();
+                            } else if (strcmp(cmd, "STATISTICS") == 0) {
+                                Statistics();
                             } else if (strcmp(cmd, "BLOCKED") == 0) {
                                 if (params.size() <= 1) {
                                     cout << "Error Input" << endl;
