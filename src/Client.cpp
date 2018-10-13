@@ -195,6 +195,7 @@ void Client::Send(string ip, int clientPort, char *message) {
 void Client::Boardcast(string message) {
     char *msg = "BOARDCAST:";
     strcat(msg, (char *) message.data());
+    cout << "MSG : " << msg << endl;
     if (send(clientfd, msg, strlen(msg), 0)) {
         cout << "Boardcast to all" << endl;
     }

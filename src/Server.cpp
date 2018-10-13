@@ -355,7 +355,7 @@ void Server::Run() {
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *clientIp = inet_ntoa(client_addr.sin_addr);
 
-                                int loginPort = client_addr.sin_port;
+                                int loginPort = (int)ntohs(client_addr.sin_port);
                                 int clientIndex = FindClient(string(clientIp), loginPort);
 
                                 if (clientIndex != -1) {
@@ -371,7 +371,7 @@ void Server::Run() {
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *clientIp = inet_ntoa(client_addr.sin_addr);
 
-                                int logoutPort = client_addr.sin_port;
+                                int logoutPort = (int)ntohs(client_addr.sin_port);
                                 int clientIndex = FindClient(string(clientIp), logoutPort);
 
                                 if (clientIndex != -1) {
@@ -397,7 +397,7 @@ void Server::Run() {
                                     getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                     char *fromClient = inet_ntoa(client_addr.sin_addr);
 
-                                    int fromClientPort = client_addr.sin_port;
+                                    int fromClientPort = (int)ntohs(client_addr.sin_port);
                                     int fromClientIndex = FindClient(string(fromClient), fromClientPort);
 
                                     if (clientList[toClientIndex].status == LOGIN) {
@@ -427,9 +427,12 @@ void Server::Run() {
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *fromClient = inet_ntoa(client_addr.sin_addr);
 
-                                int fromClientPort = client_addr.sin_port;
+                                int fromClientPort = (int)ntohs(client_addr.sin_port);
                                 int fromClientIndex = FindClient(string(fromClient), fromClientPort);
                                 for (int i = 0; i < clientList.size(); i++) {
+
+                                    cout << "i:" << i << endl;
+
                                     if (clientList[i].status == LOGIN && i != fromClientIndex) {
 
                                         char msg[255];
