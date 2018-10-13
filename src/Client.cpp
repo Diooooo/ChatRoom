@@ -67,7 +67,7 @@ void Client::Login(string ip, int serverPort) {
         if (recv(clientfd, buffer, BUFFER_SIZE, 0) >= 0) {
             cout << "Buffer:" << buffer << endl;
 
-            const char *sep = ":,";
+            const char *sep = "\n";
             char *p;
             p = strtok(buffer, sep);
             char *sign = p;
@@ -84,12 +84,17 @@ void Client::Login(string ip, int serverPort) {
 
                 cout << "receive list"<< endl;
 
-                if (params.size() >= 4) {
-                    struct info onlineClient;
-                    onlineClient.hostname = params[1];
-                    onlineClient.ip = params[2];
-                    onlineClient.port = atoi(params[3]);
-                    list.push_back(onlineClient);
+                if (params.size() >= 2) {
+                    for(int i = 1; i < params.size()-1; i++){
+                        char* p1 = strtok(params[i], ",");
+                        char* p2 = strtok(NULL, ",");
+                        char* p3 = strtok(NULL, ",");
+                        struct info onlineClient;
+                        onlineClient.hostname = p1;
+                        onlineClient.ip = p2;
+                        onlineClient.port = atoi(p3);
+                        list.push_back(onlineClient);
+                    }
                 }
 
             } else if (strcmp(sign, "Msg") == 0) {
@@ -97,8 +102,12 @@ void Client::Login(string ip, int serverPort) {
                 cout << "receive message" << endl;
 
                 //call Receive()
-                if (params.size() >= 3) {
-                    Received(string(params[1]), string(params[2]));
+                if (params.size() >= 2) {
+                    for(int i = 1; i < params.size()-1; i++){
+                        char* p1 = strtok(params[i], ",");
+                        char* p2 = strtok(NULL, ",");
+                        Received(string(p1), string(p2));
+                    }
                 }
 
             } else if (strcmp(sign, "Done") == 0) {

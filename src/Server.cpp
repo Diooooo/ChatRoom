@@ -101,15 +101,32 @@ void Server::Relay(string fromClient, string toClient, char *msg) {
     }
 }
 
+bool Server::Send(int sockfd, char *msg) {
+    unsigned long total = 0;
+    unsigned long bytes_remaining = sizeof(msg);
+    ssize_t n = 0;
+    cout << "send " << sizeof(msg) << " bytes: " << msg << endl;
+
+    while (total < sizeof(msg)) {
+        n = send(sockfd, msg + total, bytes_remaining, 0);
+        if (n == -1) {
+            break;
+        }
+        total += n;
+        bytes_remaining -= n;
+    }
+
+    return n != -1;
+}
+
+
 void Server::ResponseList(int sockfd) {
     int length = clientList.size();
-    char msg[255];
+    char msg[BUFFER_SIZE];
+    memset(msg, '\0', sizeof(msg));
+    strcpy(msg, "List\n");
     for (int i = 0; i < length; i++) {
-
-        memset(msg, '\0', sizeof(msg));
-
         if (clientList[i].status == LOGIN) {
-            strcpy(msg, "List:");
             strcat(msg, clientList[i].hostname);
             strcat(msg, ",");
             strcat(msg, clientList[i].ip);
@@ -118,12 +135,14 @@ void Server::ResponseList(int sockfd) {
             sprintf(portString, "%d", clientList[i].port);
 
             strcat(msg, portString);
-            cout << msg << endl;
-            if (send(sockfd, msg, strlen(msg), 0)) {
-                cout << "Send online client: " << i + 1 << endl;
-            }
+            strcat(msg, "\n");
+//            if (send(sockfd, msg, strlen(msg), 0)) {
+//                cout << "Send online client: " << i + 1 << endl;
+//            }
         }
     }
+    strcat(msg, "ListEnd\n");
+    Send(sockfd, msg);
 }
 
 
@@ -133,42 +152,41 @@ void Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
     cout << "S1" << endl;
     if (iter != relayList.end()) {
         int clientIndex = FindClient(string(clientIp), clientPort);
-        cout << "clientindex:" <<clientIndex << endl;
+        cout << "clientindex:" << clientIndex << endl;
 
         if (clientIndex != -1) {
-
-
             vector<relayInfo> relayMessage = iter->second;
             int length = relayMessage.size();
-            char msg[255];
+            char msg[BUFFER_SIZE];
+            memset(msg, '\0', sizeof(msg));
+            strcpy(msg, "Msg\n");
             for (int i = 0; i < length; i++) {
-                strcpy(msg, "Msg:");
                 strcat(msg, relayMessage[i].ip);
                 strcat(msg, ",");
                 strcat(msg, relayMessage[i].msg);
-                cout << msg << endl;
-                if (send(sockfd, msg, strlen(msg), 0)) {
-                    cout << "Send online client: " << i + 1 << endl;
-                }
+                strcat(msg, "\n");
+//                if (send(sockfd, msg, strlen(msg), 0)) {
+//                    cout << "Send online client: " << i + 1 << endl;
+//                }
                 clientList[clientIndex].receive++;
             }
+            strcat(msg, "MsgEnd\n");
+            Send(sockfd, msg);
         }
     }
 
 }
 
 void Server::ResponseDone(int sockfd) {
-    char *responseDone = "Done";
-    if (send(sockfd, responseDone, strlen(responseDone), 0)) {
-        cout << "Response done" << endl;
-    }
+    char *responseDone = "Done\n";
+    Send(sockfd, responseDone);
 }
 
 
 int Server::FindClient(string clientIp, int clientPort) {
     for (int i = 0; i < clientList.size(); i++) {
         if ((strcmp(clientList[i].ip, (char *) clientIp.data()) == 0)
-                && (clientList[i].port == clientPort)) {
+            && (clientList[i].port == clientPort)) {
 
             return i;
         }
@@ -392,7 +410,7 @@ void Server::Run() {
                                 int fromClientPort = client_addr.sin_port;
                                 int fromClientIndex = FindClient(string(fromClient), fromClientPort);
                                 for (int i = 0; i < clientList.size(); i++) {
-                                    if (clientList[i].status == LOGIN && i!= fromClientIndex) {
+                                    if (clientList[i].status == LOGIN && i != fromClientIndex) {
 
                                         char msg[255];
 

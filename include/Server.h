@@ -76,4 +76,6 @@ public:
 
     int FindClient(string clientIp, int clientPort);
 
+    bool Send(int sockfd, char* msg);
+
 };
