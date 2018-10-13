@@ -69,19 +69,22 @@ void Server::Statistic() {
 void Server::Blocked(string ip) {
     char *cmd = "BLOCKED";
     //judge if ip valid
-
-    map<string, vector<struct info> >::iterator iter;
-    iter = blockList.find(ip);
-    if (iter != blockList.end()) {
-        vector<info> blockClients = iter->second;
-        int length = blockClients.size();
-        sort(blockClients.begin(), blockClients.end());
-        cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
-        for (int i = 0; i < length; i++) {
-            cse4589_print_and_log("%-5d%-35s%-20s%-8d\n", i + 1, blockClients[i].hostname, blockClients[i].ip,
-                                  blockClients[i].port);
+    if (ValidIp(ip)) {
+        map<string, vector<struct info> >::iterator iter;
+        iter = blockList.find(ip);
+        if (iter != blockList.end()) {
+            vector<info> blockClients = iter->second;
+            int length = blockClients.size();
+            sort(blockClients.begin(), blockClients.end());
+            cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+            for (int i = 0; i < length; i++) {
+                cse4589_print_and_log("%-5d%-35s%-20s%-8d\n", i + 1, blockClients[i].hostname, blockClients[i].ip,
+                                      blockClients[i].port);
+            }
+            cse4589_print_and_log("[%s:END]\n", cmd);
+        } else {
+            CommandFail(cmd);
         }
-        cse4589_print_and_log("[%s:END]\n", cmd);
     } else {
         CommandFail(cmd);
     }
@@ -103,11 +106,11 @@ void Server::Relay(string fromClient, string toClient, char *msg) {
 
 bool Server::Send(int sockfd, char *msg) {
     unsigned long total = 0;
-    unsigned long bytes_remaining = sizeof(msg);
+    unsigned long bytes_remaining = strlen(msg);
     ssize_t n = 0;
-    cout << "send " << sizeof(msg) << " bytes: " << msg << endl;
+    cout << "send " << strlen(msg) << " bytes: " << msg << endl;
 
-    while (total < sizeof(msg)) {
+    while (total < strlen(msg)) {
         n = send(sockfd, msg + total, bytes_remaining, 0);
         if (n == -1) {
             break;
@@ -120,7 +123,7 @@ bool Server::Send(int sockfd, char *msg) {
 }
 
 
-char *Server::ResponseList(int sockfd) {
+string Server::ResponseList(int sockfd) {
     int length = clientList.size();
     char msg[BUFFER_SIZE];
     memset(msg, '\0', sizeof(msg));
@@ -144,16 +147,16 @@ char *Server::ResponseList(int sockfd) {
         }
     }
     strcat(msg, "ListEnd\n");
-    return msg;
+    return string(msg);
 }
 
 
-char *Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
+string Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
     map<string, vector<struct relayInfo> >::iterator iter;
     iter = relayList.find(clientIp);
     cout << "S1" << endl;
     if (iter != relayList.end()) {
-        int clientIndex = FindClient(string(clientIp), clientPort);
+        int clientIndex = FindClient(string(clientIp));
         cout << "clientindex:" << clientIndex << endl;
 
         if (clientIndex != -1) {
@@ -175,23 +178,22 @@ char *Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
                 clientList[clientIndex].receive++;
             }
             strcat(msg, "MsgEnd\n");
-            return msg;
+            return string(msg);
         }
     }
-    return NULL;
+    return "";
 
 }
 
-char *Server::ResponseDone(int sockfd) {
+string Server::ResponseDone(int sockfd) {
     char *responseDone = "Done\n";
-    return responseDone;
+    return string(responseDone);
 }
 
 
-int Server::FindClient(string clientIp, int clientPort) {
+int Server::FindClient(string clientIp) {
     for (int i = 0; i < clientList.size(); i++) {
-        if ((strcmp(clientList[i].ip, (char *) clientIp.data()) == 0)
-            && (clientList[i].port == clientPort)) {
+        if (strcmp(clientList[i].ip, (char *) clientIp.data()) == 0) {
 
             return i;
         }
@@ -298,22 +300,27 @@ void Server::Run() {
                         clientList.push_back(newClient);
                         cout << 3 << endl;
                         //here complement the response
-                        char *listMsg = ResponseList(fdaccept);
+                        string listMsg = ResponseList(fdaccept);
                         //then respond relay
-                        char *relayMsg = ResponseRelayMsg(fdaccept, string(clientIp), clientPort);
+                        string relayMsg = ResponseRelayMsg(fdaccept, string(clientIp), clientPort);
                         //finally send Done
-                        char *responseDone = ResponseDone(fdaccept);
+                        string responseDone = ResponseDone(fdaccept);
 
                         string message;
-                        if (relayMsg == NULL) {
-                            message = string(listMsg);
-                            message += string(responseDone);
-                        } else {
-                            message = string(listMsg);
-                            message += string(relayMsg);
-                            message += string(responseDone);
-                        }
+
+                        message = string(listMsg);
+                        message += string(relayMsg);
+                        message += string(responseDone);
+
                         Send(fdaccept, (char *) message.data());
+//                        char message[BUFFER_SIZE];
+//                        strcpy(message, listMsg);
+//                        if (relayMsg != NULL) {
+//                            strcat(message, relayMsg);
+//                        }
+//                        strcat(message, responseDone);
+//                        cout << "generate message: " << message << endl;
+//                        Send(fdaccept, message);
                         /* Add to watched socket list */
                         FD_SET(fdaccept, &master_list);
                         if (fdaccept > head_socket)
@@ -327,31 +334,52 @@ void Server::Run() {
 
                         if (recv(sock_index, buffer, BUFFER_SIZE, 0) <= 0) {
                             //clear data of sock_index
+                            getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
+                            cout << "Getting exit client info..." << endl;
+                            char *clientIp = inet_ntoa(client_addr.sin_addr);
+//                            int clientPort = (int) ntohs(client_addr.sin_port);
+                            int clientIndex = FindClient(string(clientIp));
+                            cout << "Got exit client info!" << endl;
 
+                            clientList.erase(clientList.begin() + clientIndex);
+                            cout << "Clear client data from clientList" << endl;
+
+                            map<string, vector<struct relayInfo> >::iterator keyRelay = relayList.find(
+                                    string(clientIp));
+                            if (keyRelay != relayList.end()) {
+                                relayList.erase(keyRelay);
+                            }
+                            cout << "Clear client data from relayList" << endl;
+
+                            map<string, vector<struct info> >::iterator keyBlock = blockList.find(string(clientIp));
+                            if (keyBlock != blockList.end()) {
+                                blockList.erase(keyBlock);
+                            }
+                            cout << "Clear client data from blockList" << endl;
 
                             close(sock_index);
                             /* Remove from watched list */
                             FD_CLR(sock_index, &master_list);
                         } else {
                             //Process incoming data from existing clients here ...
-                            const char *sep = ":,";
-                            char *p;
-                            p = strtok(buffer, sep);
-                            char *sign = p;
-                            vector<char *> params;
+//                            const char *sep = ":,";
+//                            char *p;
+//                            p = strtok(buffer, sep);
+//                            char *sign = p;
+                            vector<char *> params = Split(buffer, ":,");
                             //read other params
-                            while (p) {
-                                params.push_back(p);
-                                p = strtok(NULL, sep);
-                            }
-
+//                            while (p) {
+//                                params.push_back(p);
+//                                p = strtok(NULL, sep);
+//                            }
+                            char *sign = params[0];
                             if (strcmp(sign, "LOGIN") == 0) {
                                 //update client status
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *clientIp = inet_ntoa(client_addr.sin_addr);
 
-                                int loginPort = client_addr.sin_port;
-                                int clientIndex = FindClient(string(clientIp), loginPort);
+                                int loginPort = (int) ntohs(client_addr.sin_port);
+                                int clientIndex = FindClient(string(clientIp));
 
                                 if (clientIndex != -1) {
                                     clientList[clientIndex].status = LOGIN;
@@ -366,54 +394,66 @@ void Server::Run() {
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *clientIp = inet_ntoa(client_addr.sin_addr);
 
-                                int logoutPort = client_addr.sin_port;
-                                int clientIndex = FindClient(string(clientIp), logoutPort);
+//                                int logoutPort = (int) ntohs(client_addr.sin_port);
+                                int clientIndex = FindClient(string(clientIp));
 
                                 if (clientIndex != -1) {
                                     clientList[clientIndex].status = LOGOUT;
                                 }
 
                             } else if (strcmp(sign, "REFRESH") == 0) {
-                                ResponseList(sock_index);
+                                string listMsg = ResponseList(sock_index);
+                                Send(sock_index, (char *) listMsg.data());
                             } else if (strcmp(sign, "SEND") == 0) {
-                                if (params.size() <= 3) {
+                                if (params.size() <= 2) {
                                     perror("Unexpected params");
                                 }
                                 char *toClient = params[1];
-                                int clientPort = atoi(params[2]);
-                                char *message = params[3];
+                                char *message = params[2];
 
-                                int toClientIndex = FindClient(toClient, clientPort);
-
-                                // block issue
+                                int toClientIndex = FindClient(string(toClient));
 
                                 if (toClientIndex != -1) {
                                     getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                     char *fromClient = inet_ntoa(client_addr.sin_addr);
+//                                    int fromClientPort = (int) ntohs(client_addr.sin_port);
+                                    int fromClientIndex = FindClient(string(fromClient));
 
-                                    int fromClientPort = client_addr.sin_port;
-                                    int fromClientIndex = FindClient(string(fromClient), fromClientPort);
-
-                                    if (clientList[toClientIndex].status == LOGIN) {
-                                        char msg[255];
-
-                                        strcpy(msg, "Send:");
-                                        strcat(msg, fromClient);
-                                        strcat(msg, ",");
-                                        strcat(msg, message);
-                                        cout << msg << endl;
-                                        if (send(clientList[toClientIndex].socketfd, msg, strlen(msg), 0)) {
-                                            cout << "Send online client: " << toClientIndex + 1 << endl;
+                                    bool beBlocked = false;
+                                    // block issue
+                                    map<string, vector<struct info> >::iterator keyBlock = blockList.find(
+                                            string(toClient));
+                                    if (keyBlock != blockList.end()) {
+                                        vector<info> blockClients = keyBlock->second;
+                                        for (int i = 0; i < blockClients.size(); i++) {
+                                            if (strcmp(blockClients[i].ip, fromClient) == 0) {
+                                                beBlocked = true;
+                                                break;
+                                            }
                                         }
+                                    }
+                                    if (!beBlocked) {
+                                        if (clientList[toClientIndex].status == LOGIN) {
+                                            char msg[255];
 
-                                        clientList[fromClientIndex].send++;
-                                    } else {
-                                        Relay(string(fromClient), string(toClient), message);
+                                            strcpy(msg, "Send:");
+                                            strcat(msg, fromClient);
+                                            strcat(msg, ",");
+                                            strcat(msg, message);
+                                            cout << msg << endl;
+                                            if (send(clientList[toClientIndex].socketfd, msg, strlen(msg), 0)) {
+                                                cout << "Send online client: " << toClientIndex + 1 << endl;
+                                            }
+
+                                            clientList[toClientIndex].receive++;
+                                        } else {
+                                            Relay(string(fromClient), string(toClient), message);
+                                        }
                                     }
                                     clientList[fromClientIndex].send++;
                                 }
 
-                            } else if (strcmp(sign, "BOARDCAST") == 0) {
+                            } else if (strcmp(sign, "BROADCAST") == 0) {
                                 if (params.size() <= 1) {
                                     perror("Unexpected params");
                                 }
@@ -421,28 +461,69 @@ void Server::Run() {
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *fromClient = inet_ntoa(client_addr.sin_addr);
 
-                                int fromClientPort = client_addr.sin_port;
-                                int fromClientIndex = FindClient(string(fromClient), fromClientPort);
+//                                int fromClientPort = (int) ntohs(client_addr.sin_port);
+                                int fromClientIndex = FindClient(string(fromClient));
                                 for (int i = 0; i < clientList.size(); i++) {
-                                    if (clientList[i].status == LOGIN && i != fromClientIndex) {
+                                    if (i != fromClientIndex) {
+                                        if (clientList[i].status == LOGIN) {
 
-                                        char msg[255];
+                                            char msg[255];
 
-                                        strcpy(msg, "Send:");
-                                        strcat(msg, fromClient);
-                                        strcat(msg, ",");
-                                        strcat(msg, message);
-                                        cout << msg << endl;
-                                        if (send(clientList[i].socketfd, msg, strlen(msg), 0)) {
-                                            cout << "Send online client: " << i + 1 << endl;
+                                            strcpy(msg, "Send:");
+                                            strcat(msg, fromClient);
+                                            strcat(msg, ",");
+                                            strcat(msg, message);
+                                            cout << msg << endl;
+                                            if (send(clientList[i].socketfd, msg, strlen(msg), 0)) {
+                                                cout << "Send online client: " << i + 1 << endl;
+                                            }
+
+                                        } else {
+                                            Relay(string(fromClient), string("255.255.255.255"), message);
                                         }
-
                                         clientList[fromClientIndex].send++;
                                     }
                                 }
                             } else if (strcmp(sign, "BLOCK") == 0) {
-
+                                if (params.size() <= 1) {
+                                    perror("Unexpected params");
+                                }
+                                char *blockIp = params[1];
+                                getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
+                                char *fromClient = inet_ntoa(client_addr.sin_addr);
+                                map<string, vector<struct info> >::iterator iter;
+                                iter = blockList.find(fromClient);
+                                if (iter != blockList.end()) {
+                                    vector<info> blockClients = iter->second;
+                                    struct info blockInfo;
+                                    blockInfo.ip = blockIp;
+                                    blockClients.push_back(blockInfo);
+                                } else {
+                                    vector<info> blockClients;
+                                    struct info blockInfo;
+                                    blockInfo.ip = blockIp;
+                                    blockClients.push_back(blockInfo);
+                                    blockList.insert(pair<string, vector<info> >(fromClient, blockClients));
+                                }
                             } else if (strcmp(sign, "UNBLOCK") == 0) {
+                                if (params.size() <= 1) {
+                                    perror("Unexpected params");
+                                }
+                                char *unblockIp = params[1];
+                                getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
+                                char *fromClient = inet_ntoa(client_addr.sin_addr);
+                                map<string, vector<struct info> >::iterator iter;
+                                iter = blockList.find(fromClient);
+                                if (iter != blockList.end()) {
+                                    vector<info> blockClients = iter->second;
+                                    for (vector<info>::iterator it = blockClients.begin();
+                                         it != blockClients.end(); it++) {
+                                        if (strcmp(it->ip, unblockIp) == 0) {
+                                            blockClients.erase(it);
+                                            break;
+                                        }
+                                    }
+                                }
 
                             }
                         }

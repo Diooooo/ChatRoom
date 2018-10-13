@@ -3,6 +3,7 @@
 //
 #include <string>
 #include <vector>
+
 #ifndef BILINSHI_COMMON_H
 #define BILINSHI_COMMON_H
 
@@ -17,6 +18,10 @@ void CommandFail(char *cmd);
 
 std::string GetClientHostname(char *clientIp);
 
-std::vector<char*> Split(char* splitContent, const char* sep);
+std::vector<char *> Split(char *splitContent, const char *sep);
+
+bool ValidIp(std::string ip);
+
+bool ValidPort(std::string port);
 
 #endif //BILINSHI_COMMON_H
