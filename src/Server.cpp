@@ -529,21 +529,23 @@ void Server::Run() {
                                     perror("Unexpected params");
                                 }
                                 string blockIp = string(params[1]);
+                                int blockIndex = FindClient(blockIp);
+                                struct info blockInfo;
+                                blockInfo.hostname = clientList[blockIndex].hostname;
+                                blockInfo.ip = blockIp;
+                                blockInfo.port = clientList[blockIndex].port;
+
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *fromClient = inet_ntoa(client_addr.sin_addr);
                                 map<string, vector<struct info> >::iterator iter;
                                 iter = blockList.find(fromClient);
 
-                                struct info blockInfo;
-                                blockInfo.ip = blockIp;
 
                                 if (iter != blockList.end()) {
-                                    cout << "First block" << endl;
-                                    vector<info> blockClients = iter->second;
-
-                                    blockClients.push_back(blockInfo);
-                                } else {
                                     cout << "block for some times" << endl;
+                                    iter->second.push_back(blockInfo);
+                                } else {
+                                    cout << "first block" << endl;
                                     vector<info> blockClients;
                                     blockClients.push_back(blockInfo);
                                     blockList.insert(pair<string, vector<info> >(fromClient, blockClients));
