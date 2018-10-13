@@ -304,16 +304,24 @@ void Server::Run() {
                         //finally send Done
                         char *responseDone = ResponseDone(fdaccept);
 
-                        string message;
-                        if (relayMsg == NULL) {
-                            message = string(listMsg);
-                            message += string(responseDone);
-                        } else {
-                            message = string(listMsg);
-                            message += string(relayMsg);
-                            message += string(responseDone);
+//                        string message;
+//                        if (relayMsg == NULL) {
+//                            message = string(listMsg);
+//                            message += string(responseDone);
+//                        } else {
+//                            message = string(listMsg);
+//                            message += string(relayMsg);
+//                            message += string(responseDone);
+//                        }
+//                        Send(fdaccept, (char *) message.data());
+                        char message[BUFFER_SIZE];
+                        strcpy(message, listMsg);
+                        if (relayMsg != NULL) {
+                            strcat(message, relayMsg);
                         }
-                        Send(fdaccept, (char *) message.data());
+                        strcat(message, responseDone);
+                        cout << "generate message: " << message << endl;
+
                         /* Add to watched socket list */
                         FD_SET(fdaccept, &master_list);
                         if (fdaccept > head_socket)
@@ -334,17 +342,17 @@ void Server::Run() {
                             FD_CLR(sock_index, &master_list);
                         } else {
                             //Process incoming data from existing clients here ...
-                            const char *sep = ":,";
-                            char *p;
-                            p = strtok(buffer, sep);
-                            char *sign = p;
-                            vector<char *> params;
+//                            const char *sep = ":,";
+//                            char *p;
+//                            p = strtok(buffer, sep);
+//                            char *sign = p;
+                            vector<char *> params = Split(buffer, ":,");
                             //read other params
-                            while (p) {
-                                params.push_back(p);
-                                p = strtok(NULL, sep);
-                            }
-
+//                            while (p) {
+//                                params.push_back(p);
+//                                p = strtok(NULL, sep);
+//                            }
+                            char *sign = params[0];
                             if (strcmp(sign, "LOGIN") == 0) {
                                 //update client status
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
@@ -441,9 +449,18 @@ void Server::Run() {
                                     }
                                 }
                             } else if (strcmp(sign, "BLOCK") == 0) {
+                                if (params.size() <= 1) {
+                                    perror("Unexpected params");
+                                }
+                                char *blockIp = params[1];
+                                getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
+                                char *fromClient = inet_ntoa(client_addr.sin_addr);
 
                             } else if (strcmp(sign, "UNBLOCK") == 0) {
-
+                                if (params.size() <= 1) {
+                                    perror("Unexpected params");
+                                }
+                                char *unblockIp = params[1];
                             }
                         }
                         free(buffer);

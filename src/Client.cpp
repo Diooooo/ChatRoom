@@ -411,11 +411,8 @@ void Client::Run() {
                         char *buffer = (char *) malloc(sizeof(char) * BUFFER_SIZE);
                         memset(buffer, '\0', BUFFER_SIZE);
 
-
-                        cout << "sock_index:" << sock_index << endl;
-
                         if (recv(sock_index, buffer, BUFFER_SIZE, 0) <= 0) {
-                            perror("Impossible");
+//                            perror("Impossible");
 
                         } else {
                             const char *sep = ":,";
