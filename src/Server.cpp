@@ -94,15 +94,16 @@ void Server::Blocked(string ip) {
 }
 
 void Server::Relay(string fromClient, string toClient, char *msg) {
+    struct relayInfo relay;
+    relay.ip = (char *) fromClient.data();
+    relay.msg = msg;
     map<string, vector<struct relayInfo> >::iterator iter;
     iter = relayList.find(toClient);
     if (iter != relayList.end()) {
-        struct relayInfo relay;
-        relay.ip = (char *) fromClient.data();
-        relay.msg = msg;
         iter->second.push_back(relay);
     } else {
         vector<relayInfo> relayMessages;
+        relayMessages.push_back(relay);
         relayList.insert(pair<string, vector<relayInfo> >(toClient, relayMessages));
     }
 }
