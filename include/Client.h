@@ -20,10 +20,7 @@
 #include "../include/global.h"
 #include "../include/common.h"
 
-#define TRUE 1
-#define MSG_SIZE 256
-#define BUFFER_SIZE 256
-#define MAXCMD 500
+
 #define STDIN 0
 using namespace std;
 
