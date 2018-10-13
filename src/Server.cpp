@@ -103,11 +103,11 @@ void Server::Relay(string fromClient, string toClient, char *msg) {
 
 bool Server::Send(int sockfd, char *msg) {
     unsigned long total = 0;
-    unsigned long bytes_remaining = sizeof(msg);
+    unsigned long bytes_remaining = strlen(msg);
     ssize_t n = 0;
-    cout << "send " << sizeof(msg) << " bytes: " << msg << endl;
+    cout << "send " << strlen(msg) << " bytes: " << msg << endl;
 
-    while (total < sizeof(msg)) {
+    while (total < strlen(msg)) {
         n = send(sockfd, msg + total, bytes_remaining, 0);
         if (n == -1) {
             break;
@@ -458,6 +458,13 @@ void Server::Run() {
                                     vector<info> blockClients = iter->second;
                                     struct info blockInfo;
                                     blockInfo.ip = blockIp;
+                                    blockClients.push_back(blockInfo);
+                                }else{
+                                    vector<info> blockClients;
+                                    struct info blockInfo;
+                                    blockInfo.ip = blockIp;
+                                    blockClients.push_back(blockInfo);
+
                                 }
                             } else if (strcmp(sign, "UNBLOCK") == 0) {
                                 if (params.size() <= 1) {
