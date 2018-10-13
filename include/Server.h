@@ -70,9 +70,10 @@ public:
 
     void ResponseList(int sockfd);
 
-    void ResponseRelayMsg(int sockfd, string clientIp);
+    void ResponseRelayMsg(int sockfd, string clientIp, int clientPort);
 
     void ResponseDone(int sockfd);
 
-    int FindClient(string clientIp);
+    int FindClient(string clientIp, int clientPort);
+
 };

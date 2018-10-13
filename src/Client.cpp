@@ -65,10 +65,15 @@ void Client::Login(string ip, int serverPort) {
         memset(buffer, '\0', BUFFER_SIZE);
 
         if (recv(clientfd, buffer, BUFFER_SIZE, 0) >= 0) {
+            cout << "Buffer:" << buffer << endl;
+
             const char *sep = ":,";
             char *p;
             p = strtok(buffer, sep);
             char *sign = p;
+
+            cout << "sign:" << sign << endl;
+
             vector<char *> params;
             //read other params
             while (p) {
@@ -76,6 +81,9 @@ void Client::Login(string ip, int serverPort) {
                 p = strtok(NULL, sep);
             }
             if (strcmp(sign, "List") == 0) {
+
+                cout << "receive list"<< endl;
+
                 if (params.size() >= 4) {
                     struct info onlineClient;
                     onlineClient.hostname = params[1];
@@ -85,17 +93,25 @@ void Client::Login(string ip, int serverPort) {
                 }
 
             } else if (strcmp(sign, "Msg") == 0) {
+
+                cout << "receive message" << endl;
+
                 //call Receive()
                 if (params.size() >= 3) {
                     Received(string(params[1]), string(params[2]));
                 }
-            } else if (strcmp(sign, "done") == 0) {
+
+            } else if (strcmp(sign, "Done") == 0) {
+
                 break;
             } else {
                 perror("Unexpected message");
                 break;
             }
+            fflush(stdout);
         }
+        fflush(stdout);
+
     }
     status = LOGIN;
     char *cmd = "LOGIN";
@@ -254,6 +270,9 @@ void Client::Run() {
     if (clientfd < 0)
         perror("Create socket failed!");
 
+
+    cout << "Clientfd:" << clientfd << endl;
+
     client_addr.sin_family = AF_INET;
     client_addr.sin_addr.s_addr = inet_addr((char *) ip.data());
     client_addr.sin_port = htons(port);
@@ -265,11 +284,13 @@ void Client::Run() {
     FD_ZERO(&master_list);
     FD_ZERO(&watch_list);
 
-    FD_SET(clientfd, &master_list);
+
+    //FD_SET(clientfd, &master_list);
 
     FD_SET(STDIN, &master_list);
 
-    head_socket = clientfd;
+    head_socket = 0;
+
     while (1) {
         memcpy(&watch_list, &master_list, sizeof(master_list));
 
@@ -299,7 +320,9 @@ void Client::Run() {
                             }
                             switch (status) {
                                 case OFFLINE:
-                                case LOGIN:
+
+                                case LOGOUT:
+
                                     if (strcmp(cmd, "AUTHOR") == 0) {
                                         Author();
                                     } else if (strcmp(cmd, "IP") == 0) {
@@ -312,13 +335,19 @@ void Client::Run() {
                                         }
                                         Login(string(params[1]), atoi(params[2]));
 
+                                        cout << "status" << status << endl;
+                                        FD_SET(clientfd, &master_list);
+                                        head_socket = clientfd;
+
                                     } else if (strcmp(cmd, "EXIT") == 0) {
                                         Exit();
                                     } else {
                                         perror("Unexpected command");
                                     }
                                     break;
-                                case LOGOUT:
+
+                                case LOGIN:
+
                                     if (strcmp(cmd, "AUTHOR") == 0) {
                                         Author();
                                     } else if (strcmp(cmd, "IP") == 0) {
@@ -364,8 +393,12 @@ void Client::Run() {
                         char *buffer = (char *) malloc(sizeof(char) * BUFFER_SIZE);
                         memset(buffer, '\0', BUFFER_SIZE);
 
+
+                        cout << "sock_index:" << sock_index << endl;
+
                         if (recv(sock_index, buffer, BUFFER_SIZE, 0) <= 0) {
                             perror("Impossible");
+
                         } else {
                             const char *sep = ":,";
                             char *p;

@@ -105,6 +105,9 @@ void Server::ResponseList(int sockfd) {
     int length = clientList.size();
     char msg[255];
     for (int i = 0; i < length; i++) {
+
+        memset(msg, '\0', sizeof(msg));
+
         if (clientList[i].status == LOGIN) {
             strcpy(msg, "List:");
             strcat(msg, clientList[i].hostname);
@@ -123,11 +126,15 @@ void Server::ResponseList(int sockfd) {
     }
 }
 
-void Server::ResponseRelayMsg(int sockfd, string clientIp) {
+
+void Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
     map<string, vector<struct relayInfo> >::iterator iter;
     iter = relayList.find(clientIp);
+    cout << "S1" << endl;
     if (iter != relayList.end()) {
-        int clientIndex = FindClient(string(clientIp));
+        int clientIndex = FindClient(string(clientIp), clientPort);
+        cout << "clientindex:" <<clientIndex << endl;
+
         if (clientIndex != -1) {
 
 
@@ -157,9 +164,12 @@ void Server::ResponseDone(int sockfd) {
     }
 }
 
-int Server::FindClient(string clientIp) {
+
+int Server::FindClient(string clientIp, int clientPort) {
     for (int i = 0; i < clientList.size(); i++) {
-        if (strcmp(clientList[i].ip, (char *) clientIp.data()) == 0) {
+        if ((strcmp(clientList[i].ip, (char *) clientIp.data()) == 0)
+                && (clientList[i].port == clientPort)) {
+
             return i;
         }
     }
@@ -267,7 +277,8 @@ void Server::Run() {
                         //here complement the response
                         ResponseList(fdaccept);
                         //then respond relay
-                        ResponseRelayMsg(fdaccept, string(clientIp));
+                        ResponseRelayMsg(fdaccept, string(clientIp), clientPort);
+
 
                         //finally send Done
                         ResponseDone(fdaccept);
@@ -306,19 +317,26 @@ void Server::Run() {
                                 //update client status
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *clientIp = inet_ntoa(client_addr.sin_addr);
-                                int clientIndex = FindClient(string(clientIp));
+
+                                int loginPort = client_addr.sin_port;
+                                int clientIndex = FindClient(string(clientIp), loginPort);
+
                                 if (clientIndex != -1) {
                                     clientList[clientIndex].status = LOGIN;
                                 }
                                 ResponseList(sock_index);
-                                ResponseRelayMsg(sock_index, string(clientIp));
+                                ResponseRelayMsg(sock_index, string(clientIp), loginPort);
+
                                 ResponseDone(sock_index);
 
                             } else if (strcmp(sign, "LOGOUT") == 0) {
                                 //update client status
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *clientIp = inet_ntoa(client_addr.sin_addr);
-                                int clientIndex = FindClient(string(clientIp));
+
+                                int logoutPort = client_addr.sin_port;
+                                int clientIndex = FindClient(string(clientIp), logoutPort);
+
                                 if (clientIndex != -1) {
                                     clientList[clientIndex].status = LOGOUT;
                                 }
@@ -332,13 +350,18 @@ void Server::Run() {
                                 char *toClient = params[1];
                                 int clientPort = atoi(params[2]);
                                 char *message = params[3];
-                                int toClientIndex = FindClient(toClient);
+
+                                int toClientIndex = FindClient(toClient, clientPort);
+
                                 // block issue
 
                                 if (toClientIndex != -1) {
                                     getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                     char *fromClient = inet_ntoa(client_addr.sin_addr);
-                                    int fromClientIndex = FindClient(string(fromClient));
+
+                                    int fromClientPort = client_addr.sin_port;
+                                    int fromClientIndex = FindClient(string(fromClient), fromClientPort);
+
                                     if (clientList[toClientIndex].status == LOGIN) {
                                         char msg[255];
 
@@ -365,9 +388,12 @@ void Server::Run() {
                                 char *message = params[1];
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *fromClient = inet_ntoa(client_addr.sin_addr);
-                                int fromClientIndex = FindClient(string(fromClient));
+
+                                int fromClientPort = client_addr.sin_port;
+                                int fromClientIndex = FindClient(string(fromClient), fromClientPort);
                                 for (int i = 0; i < clientList.size(); i++) {
-                                    if (clientList[i].status == LOGIN) {
+                                    if (clientList[i].status == LOGIN && i!= fromClientIndex) {
+
                                         char msg[255];
 
                                         strcpy(msg, "Send:");
