@@ -68,11 +68,14 @@ public:
 
     void Run();
 
-    void ResponseList(int sockfd);
+    char* ResponseList(int sockfd);
 
-    void ResponseRelayMsg(int sockfd, string clientIp);
+    char* ResponseRelayMsg(int sockfd, string clientIp, int clientPort);
 
-    void ResponseDone(int sockfd);
+    char* ResponseDone(int sockfd);
 
-    int FindClient(string clientIp);
+    int FindClient(string clientIp, int clientPort);
+
+    bool Send(int sockfd, char* msg);
+
 };
