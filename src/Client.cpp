@@ -46,7 +46,9 @@ void Client::List() {
     char *cmd = "LIST";
     cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
     for (int i = 0; i < length; i++) {
-        cse4589_print_and_log("%-5d%-35s%-20s%-8d\n", i + 1, list[i].hostname, list[i].ip, list[i].port);
+        cse4589_print_and_log("%-5d%-35s%-20s%-8d\n", i + 1, (char *) list[i].hostname.data(),
+                              (char *) list[i].ip.data(),
+                              list[i].port);
     }
     cse4589_print_and_log("[%s:END]\n", cmd);
 }
@@ -58,6 +60,7 @@ void Client::Login(string ip, int serverPort) {
         char *msg = "LOGIN:NULL";
         if (send(clientfd, msg, strlen(msg), 0)) {
             cout << "Update Client Status--login" << endl;
+            list.clear();
         }
     }
 
@@ -77,8 +80,8 @@ void Client::Login(string ip, int serverPort) {
                     vector<char *> listParams = Split(params[i], ",");
 
                     struct info onlineClient;
-                    onlineClient.hostname = listParams[1];
-                    onlineClient.ip = listParams[2];
+                    onlineClient.hostname = string(listParams[1]);
+                    onlineClient.ip = string(listParams[2]);
                     onlineClient.port = atoi(listParams[3]);
                     list.push_back(onlineClient);
 
@@ -159,8 +162,8 @@ void Client::Refresh() {
                     vector<char *> listParams = Split(params[i], ",");
 
                     struct info onlineClient;
-                    onlineClient.hostname = listParams[1];
-                    onlineClient.ip = listParams[2];
+                    onlineClient.hostname = string(listParams[1]);
+                    onlineClient.ip = string(listParams[2]);
                     onlineClient.port = atoi(listParams[3]);
                     list.push_back(onlineClient);
                 }
@@ -175,7 +178,7 @@ void Client::Refresh() {
 }
 
 void Client::Send(string ip, char *message) {
-    char msg[255];
+    char msg[BUFFER_SIZE];
     strcpy(msg, "SEND:");
     strcat(msg, (char *) ip.data());
     strcat(msg, ",");
@@ -189,7 +192,7 @@ void Client::Send(string ip, char *message) {
 }
 
 void Client::Broadcast(string message) {
-    char msg[255];
+    char msg[BUFFER_SIZE];
     strcpy(msg, "BROADCAST:");
     strcat(msg, (char *) message.data());
     cout << "MSG : " << msg << endl;
@@ -202,7 +205,7 @@ void Client::Broadcast(string message) {
 }
 
 void Client::Block(string ip) {
-    char msg[255];
+    char msg[256];
     strcpy(msg, "BLOCK:");
     strcat(msg, (char *) ip.data());
     if (send(clientfd, msg, strlen(msg), 0)) {
@@ -214,7 +217,7 @@ void Client::Block(string ip) {
 }
 
 void Client::Unblock(string ip) {
-    char msg[255];
+    char msg[256];
     strcpy(msg, "UNBLOCK:");
     strcat(msg, (char *) ip.data());
     if (send(clientfd, msg, strlen(msg), 0)) {
@@ -394,14 +397,22 @@ void Client::Run() {
                                         if (beSend) {
                                             beSend = false;
                                             for (int i = 0; i < list.size(); i++) {
-                                                if (strcmp(params[1], list[i].ip) == 0) {
+                                                if (strcmp(params[1], (char *) list[i].ip.data()) == 0) {
                                                     beSend = true;
                                                     break;
                                                 }
                                             }
                                         }
                                         if (beSend) {
-                                            Send(string(params[1]), params[2]);
+                                            string message;
+                                            for (int index = 2; index < params.size(); index++) {
+                                                message += string(params[index]);
+                                                if (index != params.size() - 1) {
+                                                    message += " ";
+                                                }
+                                            }
+
+                                            Send(string(params[1]), (char *) message.data());
                                         } else {
                                             CommandFail(cmd);
                                         }
@@ -418,7 +429,7 @@ void Client::Run() {
                                         if (doBlock) {
                                             doBlock = false;
                                             for (int i = 0; i < list.size(); i++) {
-                                                if (strcmp(params[1], list[i].ip) == 0) {
+                                                if (strcmp(params[1], (char *) list[i].ip.data()) == 0) {
                                                     doBlock = true;
                                                     break;
                                                 }
@@ -426,7 +437,7 @@ void Client::Run() {
                                         }
                                         if (doBlock) {
                                             for (int i = 0; i < blockList.size(); i++) {
-                                                if (strcmp(params[1], blockList[i].ip) == 0) {
+                                                if (strcmp(params[1], (char *) blockList[i].ip.data()) == 0) {
                                                     doBlock = false;
                                                     break;
                                                 }
@@ -434,7 +445,7 @@ void Client::Run() {
                                         }
                                         if (doBlock) {
                                             struct info blockClient;
-                                            blockClient.ip = params[1];
+                                            blockClient.ip = string(params[1]);
                                             blockList.push_back(blockClient);
                                             Block(string(params[1]));
                                         } else {
@@ -449,7 +460,7 @@ void Client::Run() {
                                         if (doUnBlock) {
                                             doUnBlock = false;
                                             for (int i = 0; i < list.size(); i++) {
-                                                if (strcmp(params[1], list[i].ip) == 0) {
+                                                if (strcmp(params[1], (char *) list[i].ip.data()) == 0) {
                                                     doUnBlock = true;
                                                     break;
                                                 }
@@ -458,7 +469,7 @@ void Client::Run() {
                                         if (doUnBlock) {
                                             doUnBlock = false;
                                             for (int i = 0; i < blockList.size(); i++) {
-                                                if (strcmp(params[1], blockList[i].ip) == 0) {
+                                                if (strcmp(params[1], (char *) blockList[i].ip.data()) == 0) {
                                                     blockList.erase(blockList.begin() + i);
                                                     doUnBlock = true;
                                                     break;

@@ -41,16 +41,17 @@ void Server::List() {
     cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
     for (int i = 0; i < length; i++) {
         if (clientList[i].status == LOGIN) {
-            cse4589_print_and_log("%-5d%-35s%-20s%-8d\n", i + 1, clientList[i].hostname, clientList[i].ip,
+            cse4589_print_and_log("%-5d%-35s%-20s%-8d\n", i + 1, (char *) clientList[i].hostname.data(),
+                                  (char *) clientList[i].ip.data(),
                                   clientList[i].port);
         }
     }
     cse4589_print_and_log("[%s:END]\n", cmd);
 }
 
-void Server::Statistic() {
+void Server::Statistics() {
     sort(clientList.begin(), clientList.end());
-    char *cmd = "STATISTIC";
+    char *cmd = "STATISTICS";
     cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
     int length = clientList.size();
     for (int i = 0; i < length; i++) {
@@ -60,7 +61,8 @@ void Server::Statistic() {
         } else {
             clientStatus = "logged-out";
         }
-        cse4589_print_and_log("%-5d%-35s%-8d%-8d%-8s\n", i + 1, clientList[i].hostname, clientList[i].send,
+        cse4589_print_and_log("%-5d%-35s%-8d%-8d%-8s\n", i + 1, (char *) clientList[i].hostname.data(),
+                              clientList[i].send,
                               clientList[i].receive, clientStatus);
     }
     cse4589_print_and_log("[%s:END]\n", cmd);
@@ -78,7 +80,8 @@ void Server::Blocked(string ip) {
             sort(blockClients.begin(), blockClients.end());
             cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
             for (int i = 0; i < length; i++) {
-                cse4589_print_and_log("%-5d%-35s%-20s%-8d\n", i + 1, blockClients[i].hostname, blockClients[i].ip,
+                cse4589_print_and_log("%-5d%-35s%-20s%-8d\n", i + 1, (char *) blockClients[i].hostname.data(),
+                                      (char *) blockClients[i].ip.data(),
                                       blockClients[i].port);
             }
             cse4589_print_and_log("[%s:END]\n", cmd);
@@ -91,15 +94,16 @@ void Server::Blocked(string ip) {
 }
 
 void Server::Relay(string fromClient, string toClient, char *msg) {
+    struct relayInfo relay;
+    relay.ip = fromClient;
+    relay.msg = string(msg);
     map<string, vector<struct relayInfo> >::iterator iter;
     iter = relayList.find(toClient);
     if (iter != relayList.end()) {
-        struct relayInfo relay;
-        relay.ip = (char *) fromClient.data();
-        relay.msg = msg;
         iter->second.push_back(relay);
     } else {
         vector<relayInfo> relayMessages;
+        relayMessages.push_back(relay);
         relayList.insert(pair<string, vector<relayInfo> >(toClient, relayMessages));
     }
 }
@@ -132,9 +136,9 @@ string Server::ResponseList(int sockfd) {
         if (clientList[i].status == LOGIN) {
             strcat(msg, "List");
             strcat(msg, ",");
-            strcat(msg, clientList[i].hostname);
+            strcat(msg, (char *) clientList[i].hostname.data());
             strcat(msg, ",");
-            strcat(msg, clientList[i].ip);
+            strcat(msg, (char *) clientList[i].ip.data());
             strcat(msg, ",");
             char portString[10];
             sprintf(portString, "%d", clientList[i].port);
@@ -154,31 +158,28 @@ string Server::ResponseList(int sockfd) {
 string Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
     map<string, vector<struct relayInfo> >::iterator iter;
     iter = relayList.find(clientIp);
-    cout << "S1" << endl;
+    cout << "ResponseRelayMsg()" << endl;
     if (iter != relayList.end()) {
         int clientIndex = FindClient(string(clientIp));
-        cout << "clientindex:" << clientIndex << endl;
 
         if (clientIndex != -1) {
             vector<relayInfo> relayMessage = iter->second;
             int length = relayMessage.size();
-            char msg[BUFFER_SIZE];
-            memset(msg, '\0', sizeof(msg));
-            strcpy(msg, "Msg\n");
+
+            string msg("Msg\n");
             for (int i = 0; i < length; i++) {
-                strcat(msg, "Msg");
-                strcat(msg, ",");
-                strcat(msg, relayMessage[i].ip);
-                strcat(msg, ",");
-                strcat(msg, relayMessage[i].msg);
-                strcat(msg, "\n");
+                msg += "Msg,";
+                msg += relayMessage[i].ip;
+                msg += ",";
+                msg += relayMessage[i].msg;
+                msg += "\n";
 //                if (send(sockfd, msg, strlen(msg), 0)) {
 //                    cout << "Send online client: " << i + 1 << endl;
 //                }
                 clientList[clientIndex].receive++;
             }
-            strcat(msg, "MsgEnd\n");
-            return string(msg);
+            msg += "MsgEnd\n";
+            return msg;
         }
     }
     return "";
@@ -193,7 +194,7 @@ string Server::ResponseDone(int sockfd) {
 
 int Server::FindClient(string clientIp) {
     for (int i = 0; i < clientList.size(); i++) {
-        if (strcmp(clientList[i].ip, (char *) clientIp.data()) == 0) {
+        if (clientList[i].ip == clientIp) {
 
             return i;
         }
@@ -228,7 +229,7 @@ void Server::Run() {
     FD_SET(STDIN, &master_list);
 
     head_socket = server_socket;
-
+    struct info newClient;
     while (1) {
         memcpy(&watch_list, &master_list, sizeof(master_list));
         bzero(&client_addr, sizeof(client_addr));
@@ -264,8 +265,8 @@ void Server::Run() {
                                 Port();
                             } else if (strcmp(cmd, "LIST") == 0) {
                                 List();
-                            } else if (strcmp(cmd, "STATISTIC") == 0) {
-                                Statistic();
+                            } else if (strcmp(cmd, "STATISTICS") == 0) {
+                                Statistics();
                             } else if (strcmp(cmd, "BLOCKED") == 0) {
                                 if (params.size() <= 1) {
                                     cout << "Error Input" << endl;
@@ -288,9 +289,9 @@ void Server::Run() {
                         string clientHostname = GetClientHostname(clientIp);
 //                        getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                         cout << clientHostname << endl;
-                        struct info newClient;
-                        newClient.hostname = (char *) clientHostname.data();
-                        newClient.ip = clientIp;
+//                        struct info newClient;
+                        newClient.hostname = clientHostname;
+                        newClient.ip = string(clientIp);
                         newClient.port = clientPort;
                         newClient.send = 0;
                         newClient.receive = 0;
@@ -384,10 +385,20 @@ void Server::Run() {
                                 if (clientIndex != -1) {
                                     clientList[clientIndex].status = LOGIN;
                                 }
-                                ResponseList(sock_index);
-                                ResponseRelayMsg(sock_index, string(clientIp), loginPort);
+                                //here complement the response
+                                string listMsg = ResponseList(sock_index);
+                                //then respond relay
+                                string relayMsg = ResponseRelayMsg(sock_index, string(clientIp), loginPort);
+                                //finally send Done
+                                string responseDone = ResponseDone(sock_index);
 
-                                ResponseDone(sock_index);
+                                string message;
+
+                                message = string(listMsg);
+                                message += string(relayMsg);
+                                message += string(responseDone);
+
+                                Send(sock_index, (char *) message.data());
 
                             } else if (strcmp(sign, "LOGOUT") == 0) {
                                 //update client status
@@ -426,7 +437,7 @@ void Server::Run() {
                                     if (keyBlock != blockList.end()) {
                                         vector<info> blockClients = keyBlock->second;
                                         for (int i = 0; i < blockClients.size(); i++) {
-                                            if (strcmp(blockClients[i].ip, fromClient) == 0) {
+                                            if (strcmp((char *) blockClients[i].ip.data(), fromClient) == 0) {
                                                 beBlocked = true;
                                                 break;
                                             }
@@ -434,7 +445,7 @@ void Server::Run() {
                                     }
                                     if (!beBlocked) {
                                         if (clientList[toClientIndex].status == LOGIN) {
-                                            char msg[255];
+                                            char msg[BUFFER_SIZE];
 
                                             strcpy(msg, "Send:");
                                             strcat(msg, fromClient);
@@ -447,6 +458,11 @@ void Server::Run() {
 
                                             clientList[toClientIndex].receive++;
                                         } else {
+                                            char *cmd = "RELAY";
+                                            cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+                                            cse4589_print_and_log("msg from:%s, to:%s\n[msg]:%s\n", fromClient,
+                                                                  toClient, message);
+                                            cse4589_print_and_log("[%s:END]\n", cmd);
                                             Relay(string(fromClient), string(toClient), message);
                                         }
                                     }
@@ -465,43 +481,72 @@ void Server::Run() {
                                 int fromClientIndex = FindClient(string(fromClient));
                                 for (int i = 0; i < clientList.size(); i++) {
                                     if (i != fromClientIndex) {
-                                        if (clientList[i].status == LOGIN) {
 
-                                            char msg[255];
-
-                                            strcpy(msg, "Send:");
-                                            strcat(msg, fromClient);
-                                            strcat(msg, ",");
-                                            strcat(msg, message);
-                                            cout << msg << endl;
-                                            if (send(clientList[i].socketfd, msg, strlen(msg), 0)) {
-                                                cout << "Send online client: " << i + 1 << endl;
+                                        bool beBlocked = false;
+                                        // block issue
+                                        map<string, vector<struct info> >::iterator keyBlock = blockList.find(
+                                                clientList[i].ip);
+                                        if (keyBlock != blockList.end()) {
+                                            vector<info> blockClients = keyBlock->second;
+                                            for (int j = 0; j < blockClients.size(); j++) {
+                                                if (strcmp((char *) blockClients[j].ip.data(), fromClient) == 0) {
+                                                    beBlocked = true;
+                                                    break;
+                                                }
                                             }
-
-                                        } else {
-                                            Relay(string(fromClient), string("255.255.255.255"), message);
                                         }
-                                        clientList[fromClientIndex].send++;
+                                        if (!beBlocked) {
+                                            if (clientList[i].status == LOGIN) {
+
+                                                char msg[BUFFER_SIZE];
+
+                                                strcpy(msg, "Send:");
+                                                strcat(msg, fromClient);
+                                                strcat(msg, ",");
+                                                strcat(msg, message);
+                                                cout << msg << endl;
+                                                if (send(clientList[i].socketfd, msg, strlen(msg), 0)) {
+                                                    cout << "Send online client: " << i + 1 << endl;
+                                                }
+
+                                            } else {
+                                                char *cmd = "RELAY";
+                                                cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+                                                cse4589_print_and_log("msg from:%s, to:%s\n[msg]:%s\n", fromClient,
+                                                                      (char *) string("255.255.255.255").data(),
+                                                                      message);
+                                                cse4589_print_and_log("[%s:END]\n", cmd);
+                                                Relay(string(fromClient), string("255.255.255.255"), message);
+                                            }
+                                        }
+//                                        clientList[fromClientIndex].send++;
                                     }
                                 }
+                                clientList[fromClientIndex].send++;
+
                             } else if (strcmp(sign, "BLOCK") == 0) {
                                 if (params.size() <= 1) {
                                     perror("Unexpected params");
                                 }
-                                char *blockIp = params[1];
+                                string blockIp = string(params[1]);
+                                int blockIndex = FindClient(blockIp);
+                                struct info blockInfo;
+                                blockInfo.hostname = clientList[blockIndex].hostname;
+                                blockInfo.ip = blockIp;
+                                blockInfo.port = clientList[blockIndex].port;
+
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *fromClient = inet_ntoa(client_addr.sin_addr);
                                 map<string, vector<struct info> >::iterator iter;
                                 iter = blockList.find(fromClient);
+
+
                                 if (iter != blockList.end()) {
-                                    vector<info> blockClients = iter->second;
-                                    struct info blockInfo;
-                                    blockInfo.ip = blockIp;
-                                    blockClients.push_back(blockInfo);
+                                    cout << "block for some times" << endl;
+                                    iter->second.push_back(blockInfo);
                                 } else {
+                                    cout << "first block" << endl;
                                     vector<info> blockClients;
-                                    struct info blockInfo;
-                                    blockInfo.ip = blockIp;
                                     blockClients.push_back(blockInfo);
                                     blockList.insert(pair<string, vector<info> >(fromClient, blockClients));
                                 }
@@ -515,11 +560,10 @@ void Server::Run() {
                                 map<string, vector<struct info> >::iterator iter;
                                 iter = blockList.find(fromClient);
                                 if (iter != blockList.end()) {
-                                    vector<info> blockClients = iter->second;
-                                    for (vector<info>::iterator it = blockClients.begin();
-                                         it != blockClients.end(); it++) {
-                                        if (strcmp(it->ip, unblockIp) == 0) {
-                                            blockClients.erase(it);
+                                    for (vector<info>::iterator it = iter->second.begin();
+                                         it != iter->second.end(); it++) {
+                                        if (strcmp((char *) it->ip.data(), unblockIp) == 0) {
+                                            iter->second.erase(it);
                                             break;
                                         }
                                     }

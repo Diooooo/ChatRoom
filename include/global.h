@@ -5,6 +5,9 @@
 #define PATH_LEN 256
 
 #define BUFFER_SIZE 65535
+
+#include <string>
+
 enum clientStatus {
     LOGIN,
     LOGOUT,
@@ -12,8 +15,8 @@ enum clientStatus {
 };
 
 struct info {
-    char *hostname;
-    char *ip;
+    std::string hostname;
+    std::string ip;
     int port;
     enum clientStatus status;
     int send;
@@ -36,7 +39,7 @@ struct info {
 
 
 struct relayInfo {
-    char *ip;
-    char *msg;
+    std::string ip;
+    std::string msg;
 };
 #endif

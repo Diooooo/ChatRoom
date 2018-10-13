@@ -60,7 +60,7 @@ public:
 
     void List();
 
-    void Statistic();
+    void Statistics();
 
     void Blocked(string ip);
 
