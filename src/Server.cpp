@@ -1,167 +1,409 @@
-/**
- * @server
- * @author  Swetank Kumar Saha <swetankk@buffalo.edu>
- * @version 1.0
- *
- * @section LICENSE
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * General Public License for more details at
- * http://www.gnu.org/copyleft/gpl.html
- *
- * @section DESCRIPTION
- *
- * This file contains the server init and main while loop for tha application.
- * Uses the select() API to multiplex between network I/O and STDIN.
- */
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <strings.h>
-#include <string.h>
-#include <unistd.h>
+#include <iostream>
+#include <string>
+#include <map>
 
-#define BACKLOG 5
-#define STDIN 0
-#define TRUE 1
-#define CMD_SIZE 100
-#define BUFFER_SIZE 256
+#include "../include/Server.h"
 
-/**
- * main function
- *
- * @param  argc Number of arguments
- * @param  argv The argument list
- * @return 0 EXIT_SUCCESS
- */
-int main(int argc, char **argv)
-{
-  if(argc != 2) {
-    printf("Usage:%s [port]\n", argv[0]);
-    exit(-1);
-  }
+using namespace std;
 
-  int port, server_socket, head_socket, selret, sock_index, fdaccept=0;
-  struct sockaddr_in server_addr, client_addr;
-  fd_set master_list, watch_list;
-  socklen_t caddr_len;
-
-  /* Socket */
-  server_socket = socket(AF_INET, SOCK_STREAM, 0);
-  if(server_socket < 0)
-    perror("Cannot create socket");
-
-  /* Fill up sockaddr_in struct */
-  port = atoi(argv[1]);
-  bzero(&server_addr, sizeof(server_addr));
-
-  server_addr.sin_family = AF_INET;
-  server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  server_addr.sin_port = htons(port);
-
-  /* Bind */
-  if(bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0 )
-    perror("Bind failed");
-
-  /* Listen */
-  if(listen(server_socket, BACKLOG) < 0)
-    perror("Unable to listen on port");
-
-  /* ---------------------------------------------------------------------------- */
-
-  /* Zero select FD sets */
-  FD_ZERO(&master_list);
-  FD_ZERO(&watch_list);
-
-  /* Register the listening socket */
-  FD_SET(server_socket, &master_list);
-  /* Register STDIN */
-  FD_SET(STDIN, &master_list);
-
-  head_socket = server_socket;
-
-  while(TRUE){
-    memcpy(&watch_list, &master_list, sizeof(master_list));
-
-    //printf("\n[PA1-Server@CSE489/589]$ ");
-    //fflush(stdout);
-
-    /* select() system call. This will BLOCK */
-    selret = select(head_socket + 1, &watch_list, NULL, NULL, NULL);
-    if(selret < 0)
-      perror("select failed.");
-
-    /* Check if we have sockets/STDIN to process */
-    if(selret > 0){
-      /* Loop through socket descriptors to check which ones are ready */
-      for(sock_index = 0; sock_index <= head_socket; sock_index += 1){
-
-        if(FD_ISSET(sock_index, &watch_list)){
-
-          /* Check if new command on STDIN */
-          if (sock_index == STDIN){
-            char *cmd = (char*) malloc(sizeof(char)*CMD_SIZE);
-
-            memset(cmd, '\0', CMD_SIZE);
-            if(fgets(cmd, CMD_SIZE-1, stdin) == NULL) //Mind the newline character that will be written to cmd
-              exit(-1);
-
-            printf("\nI got: %s\n", cmd);
-
-            //Process PA1 commands here ...
-
-            free(cmd);
-          }
-          /* Check if new client is requesting connection */
-          else if(sock_index == server_socket){
-            caddr_len = sizeof(client_addr);
-            fdaccept = accept(server_socket, (struct sockaddr *)&client_addr, &caddr_len);
-            if(fdaccept < 0)
-              perror("Accept failed.");
-
-            printf("\nRemote Host connected!\n");
-
-            /* Add to watched socket list */
-            FD_SET(fdaccept, &master_list);
-            if(fdaccept > head_socket) head_socket = fdaccept;
-          }
-          /* Read from existing clients */
-          else{
-            /* Initialize buffer to receieve response */
-            char *buffer = (char*) malloc(sizeof(char)*BUFFER_SIZE);
-            memset(buffer, '\0', BUFFER_SIZE);
-
-            if(recv(sock_index, buffer, BUFFER_SIZE, 0) <= 0){
-              close(sock_index);
-              printf("Remote Host terminated connection!\n");
-
-              /* Remove from watched list */
-              FD_CLR(sock_index, &master_list);
-            }
-            else {
-              //Process incoming data from existing clients here ...
-
-              printf("\nClient sent me: %s\n", buffer);
-              printf("ECHOing it back to the remote host ... ");
-              if(send(sock_index, buffer, strlen(buffer), 0) == strlen(buffer))
-                printf("Done!\n");
-              fflush(stdout);
-            }
-
-            free(buffer);
-          }
-        }
-      }
-    }
-  }
-
-  return 0;
+Server::Server(int portNumber) {
+    port = portNumber;
+    hostname = GetHostname();
+    ip = GetIP();
+    caddr_len = sizeof(client_addr);
 }
+
+void Server::Author() {
+    char *cmd = "AUTHOR";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    cse4589_print_and_log("I, %s, have read and understood the course academic integrity policy.\n", "bilinshi");
+    cse4589_print_and_log("[%s:END]\n", cmd);
+}
+
+void Server::Ip() {
+    char *cmd = "IP";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    cse4589_print_and_log("IP:%s\n", ip.c_str());
+    cse4589_print_and_log("[%s:END]\n", cmd);
+}
+
+void Server::Port() {
+    char *cmd = "PORT";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    cse4589_print_and_log("PORT:%d\n", port);
+    cse4589_print_and_log("[%s:END]\n", cmd);
+}
+
+void Server::List() {
+    sort(clientList.begin(), clientList.end());
+    int length = clientList.size();
+    char *cmd = "LIST";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    for (int i = 0; i < length; i++) {
+        if (clientList[i].status == LOGIN) {
+            cse4589_print_and_log("%-5d%-35s%-20s%-8d\n", i + 1, clientList[i].hostname, clientList[i].ip,
+                                  clientList[i].port);
+        }
+    }
+    cse4589_print_and_log("[%s:END]\n", cmd);
+}
+
+void Server::Statistic() {
+    sort(clientList.begin(), clientList.end());
+    char *cmd = "STATISTIC";
+    cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+    int length = clientList.size();
+    for (int i = 0; i < length; i++) {
+        char *clientStatus;
+        if (clientList[i].status == LOGIN) {
+            clientStatus = "logged-in";
+        } else {
+            clientStatus = "logged-out";
+        }
+        cse4589_print_and_log("%-5d%-35s%-8d%-8d%-8s\n", i + 1, clientList[i].hostname, clientList[i].send,
+                              clientList[i].receive, clientStatus);
+    }
+    cse4589_print_and_log("[%s:END]\n", cmd);
+}
+
+void Server::Blocked(string ip) {
+    char *cmd = "BLOCKED";
+    //judge if ip valid
+
+    map<string, vector<struct info> >::iterator iter;
+    iter = blockList.find(ip);
+    if (iter != blockList.end()) {
+        vector<info> blockClients = iter->second;
+        int length = blockClients.size();
+        sort(blockClients.begin(), blockClients.end());
+        cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+        for (int i = 0; i < length; i++) {
+            cse4589_print_and_log("%-5d%-35s%-20s%-8d\n", i + 1, blockClients[i].hostname, blockClients[i].ip,
+                                  blockClients[i].port);
+        }
+        cse4589_print_and_log("[%s:END]\n", cmd);
+    } else {
+        CommandFail(cmd);
+    }
+}
+
+void Server::Relay(string fromClient, string toClient, char *msg) {
+    map<string, vector<struct relayInfo> >::iterator iter;
+    iter = relayList.find(toClient);
+    if (iter != relayList.end()) {
+        struct relayInfo relay;
+        relay.ip = (char *) fromClient.data();
+        relay.msg = msg;
+        iter->second.push_back(relay);
+    } else {
+        vector<relayInfo> relayMessages;
+        relayList.insert(pair<string, vector<relayInfo> >(toClient, relayMessages));
+    }
+}
+
+void Server::ResponseList(int sockfd) {
+    int length = clientList.size();
+    char msg[255];
+    for (int i = 0; i < length; i++) {
+        memset(msg, '\0', sizeof(msg));
+        if (clientList[i].status == LOGIN) {
+            strcpy(msg, "List:");
+            strcat(msg, clientList[i].hostname);
+            strcat(msg, ",");
+            strcat(msg, clientList[i].ip);
+            strcat(msg, ",");
+            char portString[10];
+            sprintf(portString, "%d", clientList[i].port);
+
+            strcat(msg, portString);
+            cout << msg << endl;
+            if (send(sockfd, msg, strlen(msg), 0)) {
+                cout << "Send online client: " << i + 1 << endl;
+            }
+        }
+    }
+}
+
+void Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
+    map<string, vector<struct relayInfo> >::iterator iter;
+    iter = relayList.find(clientIp);
+    cout << "S1" << endl;
+    if (iter != relayList.end()) {
+        int clientIndex = FindClient(string(clientIp), clientPort);
+        cout << "clientindex:" <<clientIndex << endl;
+        if (clientIndex != -1) {
+
+
+            vector<relayInfo> relayMessage = iter->second;
+            int length = relayMessage.size();
+            char msg[255];
+            for (int i = 0; i < length; i++) {
+                strcpy(msg, "Msg:");
+                strcat(msg, relayMessage[i].ip);
+                strcat(msg, ",");
+                strcat(msg, relayMessage[i].msg);
+                cout << msg << endl;
+                if (send(sockfd, msg, strlen(msg), 0)) {
+                    cout << "Send online client: " << i + 1 << endl;
+                }
+                clientList[clientIndex].receive++;
+            }
+        }
+    }
+
+}
+
+void Server::ResponseDone(int sockfd) {
+    char *responseDone = "Done";
+    if (send(sockfd, responseDone, strlen(responseDone), 0)) {
+        cout << "Response done" << endl;
+    }
+}
+
+int Server::FindClient(string clientIp, int clientPort) {
+    for (int i = 0; i < clientList.size(); i++) {
+        if ((strcmp(clientList[i].ip, (char *) clientIp.data()) == 0)
+                && (clientList[i].port == clientPort)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void Server::Run() {
+    server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_socket < 0)
+        perror("Create socket failed!");
+    bzero(&server_addr, sizeof(server_addr));
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr((char *) ip.data());
+    server_addr.sin_port = htons(port);
+
+    if (bind(server_socket, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+        printf("Bind failed!");
+        exit(0);
+    }
+
+    if (listen(server_socket, 10) < 0) {
+        printf("Listen socket error!");
+    }
+
+    FD_ZERO(&master_list);
+    FD_ZERO(&watch_list);
+
+    FD_SET(server_socket, &master_list);
+
+    FD_SET(STDIN, &master_list);
+
+    head_socket = server_socket;
+
+    while (1) {
+        memcpy(&watch_list, &master_list, sizeof(master_list));
+        bzero(&client_addr, sizeof(client_addr));
+        selret = select(head_socket + 1, &watch_list, NULL, NULL, NULL);
+        if (selret < 0)
+            perror("Select error!");
+
+        if (selret > 0) {
+            for (sock_index = 0; sock_index <= head_socket; sock_index++) {
+
+                if (FD_ISSET(sock_index, &watch_list)) {
+                    if (sock_index == 0) {
+                        string cmdLine;
+                        getline(cin, cmdLine);
+                        if (cmdLine.size() == 0) {
+                            exit(-1);
+                        } else {
+                            const char *sep = " ";
+                            char *p;
+                            p = strtok((char *) cmdLine.data(), sep);
+                            char *cmd = p;
+                            vector<char *> params;
+                            //read other params
+                            while (p) {
+                                params.push_back(p);
+                                p = strtok(NULL, sep);
+                            }
+                            if (strcmp(cmd, "AUTHOR") == 0) {
+                                Author();
+                            } else if (strcmp(cmd, "IP") == 0) {
+                                Ip();
+                            } else if (strcmp(cmd, "PORT") == 0) {
+                                Port();
+                            } else if (strcmp(cmd, "LIST") == 0) {
+                                List();
+                            } else if (strcmp(cmd, "STATISTIC") == 0) {
+                                Statistic();
+                            } else if (strcmp(cmd, "BLOCKED") == 0) {
+                                if (params.size() <= 1) {
+                                    cout << "Error Input" << endl;
+                                }
+                                Blocked(string(params[1]));
+                            } else {
+                                perror("Unexpected command");
+                            }
+
+                        }
+                    } else if (sock_index == server_socket) { //new client login
+                        int fdaccept = accept(server_socket, (struct sockaddr *) &client_addr, &caddr_len);
+                        if (fdaccept < 0)
+                            perror("Accept failed.");
+
+
+                        char *clientIp = inet_ntoa(client_addr.sin_addr);
+                        int clientPort = (int) ntohs(client_addr.sin_port);
+                        cout << "IP" << clientIp << endl;
+                        string clientHostname = GetClientHostname(clientIp);
+//                        getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
+                        cout << clientHostname << endl;
+                        struct info newClient;
+                        newClient.hostname = (char *) clientHostname.data();
+                        newClient.ip = clientIp;
+                        newClient.port = clientPort;
+                        newClient.send = 0;
+                        newClient.receive = 0;
+                        newClient.status = LOGIN;
+                        newClient.socketfd = fdaccept;
+
+                        clientList.push_back(newClient);
+                        cout << 3 << endl;
+                        //here complement the response
+                        ResponseList(fdaccept);
+                        //then respond relay
+                        ResponseRelayMsg(fdaccept, string(clientIp), clientPort);
+
+                        //finally send Done
+                        ResponseDone(fdaccept);
+                        /* Add to watched socket list */
+                        FD_SET(fdaccept, &master_list);
+                        if (fdaccept > head_socket)
+                            head_socket = fdaccept;
+                    }
+                        /* Read from existing clients */
+                    else {
+                        /* Initialize buffer to receive response */
+                        char *buffer = (char *) malloc(sizeof(char) * BUFFER_SIZE);
+                        memset(buffer, '\0', BUFFER_SIZE);
+
+                        if (recv(sock_index, buffer, BUFFER_SIZE, 0) <= 0) {
+                            //clear data of sock_index
+
+
+                            close(sock_index);
+                            /* Remove from watched list */
+                            FD_CLR(sock_index, &master_list);
+                        } else {
+                            //Process incoming data from existing clients here ...
+                            const char *sep = ":,";
+                            char *p;
+                            p = strtok(buffer, sep);
+                            char *sign = p;
+                            vector<char *> params;
+                            //read other params
+                            while (p) {
+                                params.push_back(p);
+                                p = strtok(NULL, sep);
+                            }
+
+                            if (strcmp(sign, "LOGIN") == 0) {
+                                //update client status
+                                getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
+                                char *clientIp = inet_ntoa(client_addr.sin_addr);
+                                int loginPort = client_addr.sin_port;
+                                int clientIndex = FindClient(string(clientIp), loginPort);
+                                if (clientIndex != -1) {
+                                    clientList[clientIndex].status = LOGIN;
+                                }
+                                ResponseList(sock_index);
+                                ResponseRelayMsg(sock_index, string(clientIp), loginPort);
+                                ResponseDone(sock_index);
+
+                            } else if (strcmp(sign, "LOGOUT") == 0) {
+                                //update client status
+                                getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
+                                char *clientIp = inet_ntoa(client_addr.sin_addr);
+                                int logoutPort = client_addr.sin_port;
+                                int clientIndex = FindClient(string(clientIp), logoutPort);
+                                if (clientIndex != -1) {
+                                    clientList[clientIndex].status = LOGOUT;
+                                }
+
+                            } else if (strcmp(sign, "REFRESH") == 0) {
+                                ResponseList(sock_index);
+                            } else if (strcmp(sign, "SEND") == 0) {
+                                if (params.size() <= 3) {
+                                    perror("Unexpected params");
+                                }
+                                char *toClient = params[1];
+                                int clientPort = atoi(params[2]);
+                                char *message = params[3];
+                                int toClientIndex = FindClient(toClient, clientPort);
+                                // block issue
+
+                                if (toClientIndex != -1) {
+                                    getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
+                                    char *fromClient = inet_ntoa(client_addr.sin_addr);
+                                    int fromClientPort = client_addr.sin_port;
+                                    int fromClientIndex = FindClient(string(fromClient), fromClientPort);
+                                    if (clientList[toClientIndex].status == LOGIN) {
+                                        char msg[255];
+
+                                        strcpy(msg, "Send:");
+                                        strcat(msg, fromClient);
+                                        strcat(msg, ",");
+                                        strcat(msg, message);
+                                        cout << msg << endl;
+                                        if (send(clientList[toClientIndex].socketfd, msg, strlen(msg), 0)) {
+                                            cout << "Send online client: " << toClientIndex + 1 << endl;
+                                        }
+
+                                        clientList[fromClientIndex].send++;
+                                    } else {
+                                        Relay(string(fromClient), string(toClient), message);
+                                    }
+                                    clientList[fromClientIndex].send++;
+                                }
+
+                            } else if (strcmp(sign, "BOARDCAST") == 0) {
+                                if (params.size() <= 1) {
+                                    perror("Unexpected params");
+                                }
+                                char *message = params[1];
+                                getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
+                                char *fromClient = inet_ntoa(client_addr.sin_addr);
+                                int fromClientPort = client_addr.sin_port;
+                                int fromClientIndex = FindClient(string(fromClient), fromClientPort);
+                                for (int i = 0; i < clientList.size(); i++) {
+                                    if (clientList[i].status == LOGIN && i!= fromClientIndex) {
+                                        char msg[255];
+
+                                        strcpy(msg, "Send:");
+                                        strcat(msg, fromClient);
+                                        strcat(msg, ",");
+                                        strcat(msg, message);
+                                        cout << msg << endl;
+                                        if (send(clientList[i].socketfd, msg, strlen(msg), 0)) {
+                                            cout << "Send online client: " << i + 1 << endl;
+                                        }
+
+                                        clientList[fromClientIndex].send++;
+                                    }
+                                }
+                            }
+                        }
+                        free(buffer);
+                    }
+
+                }
+
+            }
+
+
+        }
+
+    }
+
+}
+
+
