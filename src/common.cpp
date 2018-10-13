@@ -88,3 +88,15 @@ string GetClientHostname(char *clientIp) {
 //    cout<<he->h_name<<endl;
     return string(he->h_name);
 }
+
+vector<char*> Split(char* splitContent, const char* sep){
+    char *p;
+    p = strtok(splitContent, sep);
+    vector<char *> params;
+    //read other params
+    while (p) {
+        params.push_back(p);
+        p = strtok(NULL, sep);
+    }
+    return params;
+}

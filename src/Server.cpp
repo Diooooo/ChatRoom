@@ -120,13 +120,15 @@ bool Server::Send(int sockfd, char *msg) {
 }
 
 
-void Server::ResponseList(int sockfd) {
+char *Server::ResponseList(int sockfd) {
     int length = clientList.size();
     char msg[BUFFER_SIZE];
     memset(msg, '\0', sizeof(msg));
     strcpy(msg, "List\n");
     for (int i = 0; i < length; i++) {
         if (clientList[i].status == LOGIN) {
+            strcat(msg, "List");
+            strcat(msg, ",");
             strcat(msg, clientList[i].hostname);
             strcat(msg, ",");
             strcat(msg, clientList[i].ip);
@@ -142,11 +144,11 @@ void Server::ResponseList(int sockfd) {
         }
     }
     strcat(msg, "ListEnd\n");
-    Send(sockfd, msg);
+    return msg;
 }
 
 
-void Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
+char *Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
     map<string, vector<struct relayInfo> >::iterator iter;
     iter = relayList.find(clientIp);
     cout << "S1" << endl;
@@ -161,6 +163,8 @@ void Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
             memset(msg, '\0', sizeof(msg));
             strcpy(msg, "Msg\n");
             for (int i = 0; i < length; i++) {
+                strcat(msg, "Msg");
+                strcat(msg, ",");
                 strcat(msg, relayMessage[i].ip);
                 strcat(msg, ",");
                 strcat(msg, relayMessage[i].msg);
@@ -171,15 +175,16 @@ void Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
                 clientList[clientIndex].receive++;
             }
             strcat(msg, "MsgEnd\n");
-            Send(sockfd, msg);
+            return msg;
         }
     }
+    return NULL;
 
 }
 
-void Server::ResponseDone(int sockfd) {
+char *Server::ResponseDone(int sockfd) {
     char *responseDone = "Done\n";
-    Send(sockfd, responseDone);
+    return responseDone;
 }
 
 
@@ -293,13 +298,22 @@ void Server::Run() {
                         clientList.push_back(newClient);
                         cout << 3 << endl;
                         //here complement the response
-                        ResponseList(fdaccept);
+                        char *listMsg = ResponseList(fdaccept);
                         //then respond relay
-                        ResponseRelayMsg(fdaccept, string(clientIp), clientPort);
-
-
+                        char *relayMsg = ResponseRelayMsg(fdaccept, string(clientIp), clientPort);
                         //finally send Done
-                        ResponseDone(fdaccept);
+                        char *responseDone = ResponseDone(fdaccept);
+
+                        string message;
+                        if (relayMsg == NULL) {
+                            message = string(listMsg);
+                            message += string(responseDone);
+                        } else {
+                            message = string(listMsg);
+                            message += string(relayMsg);
+                            message += string(responseDone);
+                        }
+                        Send(fdaccept, (char *) message.data());
                         /* Add to watched socket list */
                         FD_SET(fdaccept, &master_list);
                         if (fdaccept > head_socket)
@@ -426,6 +440,10 @@ void Server::Run() {
                                         clientList[fromClientIndex].send++;
                                     }
                                 }
+                            } else if (strcmp(sign, "BLOCK") == 0) {
+
+                            } else if (strcmp(sign, "UNBLOCK") == 0) {
+
                             }
                         }
                         free(buffer);

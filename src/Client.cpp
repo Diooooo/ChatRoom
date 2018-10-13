@@ -60,68 +60,77 @@ void Client::Login(string ip, int serverPort) {
             cout << "Update Client Status--login" << endl;
         }
     }
-    while (1) {
-        char *buffer = (char *) malloc(sizeof(char) * BUFFER_SIZE);
-        memset(buffer, '\0', BUFFER_SIZE);
 
-        if (recv(clientfd, buffer, BUFFER_SIZE, 0) >= 0) {
-            cout << "Buffer:" << buffer << endl;
+    char *buffer = (char *) malloc(sizeof(char) * BUFFER_SIZE);
+    memset(buffer, '\0', BUFFER_SIZE);
 
-            const char *sep = "\n";
-            char *p;
-            p = strtok(buffer, sep);
-            char *sign = p;
+    if (recv(clientfd, buffer, BUFFER_SIZE, 0) >= 0) {
+        cout << "Buffer:" << buffer << endl;
 
-            cout << "sign:" << sign << endl;
-
-            vector<char *> params;
-            //read other params
-            while (p) {
-                params.push_back(p);
-                p = strtok(NULL, sep);
-            }
-            if (strcmp(sign, "List") == 0) {
-
-                cout << "receive list"<< endl;
-
-                if (params.size() >= 2) {
-                    for(int i = 1; i < params.size()-1; i++){
-                        char* p1 = strtok(params[i], ",");
-                        char* p2 = strtok(NULL, ",");
-                        char* p3 = strtok(NULL, ",");
-                        struct info onlineClient;
-                        onlineClient.hostname = p1;
-                        onlineClient.ip = p2;
-                        onlineClient.port = atoi(p3);
-                        list.push_back(onlineClient);
-                    }
-                }
-
-            } else if (strcmp(sign, "Msg") == 0) {
-
-                cout << "receive message" << endl;
-
-                //call Receive()
-                if (params.size() >= 2) {
-                    for(int i = 1; i < params.size()-1; i++){
-                        char* p1 = strtok(params[i], ",");
-                        char* p2 = strtok(NULL, ",");
-                        Received(string(p1), string(p2));
-                    }
-                }
-
-            } else if (strcmp(sign, "Done") == 0) {
-
-                break;
+        vector<char *> params = Split(buffer, "\n");
+        for (int i = 0; i < params.size(); i++) {
+            if (strcmp(params[i], "List") == 0 || strcmp(params[i], "ListEnd") == 0 || strcmp(params[i], "Msg") == 0 ||
+                strcmp(params[i], "MsgEnd") == 0 || strcmp(params[i], "Done") == 0) {
+                continue;
             } else {
-                perror("Unexpected message");
-                break;
-            }
-            fflush(stdout);
-        }
-        fflush(stdout);
+                if (strstr(params[i], "List")) {
+                    vector<char *> listParams = Split(params[i], ",");
 
+                    struct info onlineClient;
+                    onlineClient.hostname = listParams[1];
+                    onlineClient.ip =listParams[2];
+                    onlineClient.port = atoi(listParams[3]);
+                    list.push_back(onlineClient);
+
+                }
+                if (strstr(params[i], "Msg")) {
+                    vector<char *> msgParams = Split(params[i], ",");
+                    Received(string(msgParams[1]), string(msgParams[2]));
+                }
+            }
+        }
+//        if (strcmp(sign, "List") == 0) {
+//
+//            cout << "receive list" << endl;
+//
+//            if (params.size() >= 2) {
+//                for (int i = 1; i < params.size() - 1; i++) {
+//                    char *p1 = strtok(params[i], ",");
+//                    char *p2 = strtok(NULL, ",");
+//                    char *p3 = strtok(NULL, ",");
+//                    struct info onlineClient;
+//                    onlineClient.hostname = p1;
+//                    onlineClient.ip = p2;
+//                    onlineClient.port = atoi(p3);
+//                    list.push_back(onlineClient);
+//                }
+//            }
+//
+//        } else if (strcmp(sign, "Msg") == 0) {
+//
+//            cout << "receive message" << endl;
+//
+//            //call Receive()
+//            if (params.size() >= 2) {
+//                for (int i = 1; i < params.size() - 1; i++) {
+//                    char *p1 = strtok(params[i], ",");
+//                    char *p2 = strtok(NULL, ",");
+//                    Received(string(p1), string(p2));
+//                }
+//            }
+//
+//        } else if (strcmp(sign, "Done") == 0) {
+//
+//            break;
+//        } else {
+//            perror("Unexpected message");
+//            break;
+//        }
+        fflush(stdout);
     }
+//    fflush(stdout);
+
+
     status = LOGIN;
     char *cmd = "LOGIN";
     cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
