@@ -379,7 +379,8 @@ void Server::Run() {
                                 }
 
                             } else if (strcmp(sign, "REFRESH") == 0) {
-                                ResponseList(sock_index);
+                                string listMsg = ResponseList(sock_index);
+                                Send(sock_index, (char *) listMsg.data());
                             } else if (strcmp(sign, "SEND") == 0) {
                                 if (params.size() <= 3) {
                                     perror("Unexpected params");
@@ -453,24 +454,39 @@ void Server::Run() {
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *fromClient = inet_ntoa(client_addr.sin_addr);
                                 map<string, vector<struct info> >::iterator iter;
-                                iter = blockList.find(ip);
+                                iter = blockList.find(fromClient);
                                 if (iter != blockList.end()) {
                                     vector<info> blockClients = iter->second;
                                     struct info blockInfo;
                                     blockInfo.ip = blockIp;
                                     blockClients.push_back(blockInfo);
-                                }else{
+                                } else {
                                     vector<info> blockClients;
                                     struct info blockInfo;
                                     blockInfo.ip = blockIp;
                                     blockClients.push_back(blockInfo);
-
+                                    blockList.insert(pair<string, vector<info> >(fromClient, blockClients));
                                 }
                             } else if (strcmp(sign, "UNBLOCK") == 0) {
                                 if (params.size() <= 1) {
                                     perror("Unexpected params");
                                 }
                                 char *unblockIp = params[1];
+                                getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
+                                char *fromClient = inet_ntoa(client_addr.sin_addr);
+                                map<string, vector<struct info> >::iterator iter;
+                                iter = blockList.find(fromClient);
+                                if (iter != blockList.end()) {
+                                    vector<info> blockClients = iter->second;
+                                    for (vector<info>::iterator it = blockClients.begin();
+                                         it != blockClients.end(); it++) {
+                                        if (strcmp(it->ip, unblockIp) == 0) {
+                                            blockClients.erase(it);
+                                            break;
+                                        }
+                                    }
+                                }
+
                             }
                         }
                         free(buffer);
