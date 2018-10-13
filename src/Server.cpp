@@ -387,10 +387,20 @@ void Server::Run() {
                                 if (clientIndex != -1) {
                                     clientList[clientIndex].status = LOGIN;
                                 }
-                                ResponseList(sock_index);
-                                ResponseRelayMsg(sock_index, string(clientIp), loginPort);
+                                //here complement the response
+                                string listMsg = ResponseList(sock_index);
+                                //then respond relay
+                                string relayMsg = ResponseRelayMsg(sock_index, string(clientIp), loginPort);
+                                //finally send Done
+                                string responseDone = ResponseDone(sock_index);
 
-                                ResponseDone(sock_index);
+                                string message;
+
+                                message = string(listMsg);
+                                message += string(relayMsg);
+                                message += string(responseDone);
+
+                                Send(sock_index, (char *) message.data());
 
                             } else if (strcmp(sign, "LOGOUT") == 0) {
                                 //update client status
@@ -450,6 +460,11 @@ void Server::Run() {
 
                                             clientList[toClientIndex].receive++;
                                         } else {
+                                            char *cmd = "RELAY";
+                                            cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+                                            cse4589_print_and_log("msg from:%s, to:%s\n[msg]:%s\n", fromClient,
+                                                                  toClient, message);
+                                            cse4589_print_and_log("[%s:END]\n", cmd);
                                             Relay(string(fromClient), string(toClient), message);
                                         }
                                     }
@@ -482,6 +497,11 @@ void Server::Run() {
                                             }
 
                                         } else {
+                                            char *cmd = "RELAY";
+                                            cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+                                            cse4589_print_and_log("msg from:%s, to:%s\n[msg]:%s\n", fromClient,
+                                                                  (char *) string("255.255.255.255").data(), message);
+                                            cse4589_print_and_log("[%s:END]\n", cmd);
                                             Relay(string(fromClient), string("255.255.255.255"), message);
                                         }
                                         clientList[fromClientIndex].send++;

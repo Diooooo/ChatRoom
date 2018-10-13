@@ -60,6 +60,7 @@ void Client::Login(string ip, int serverPort) {
         char *msg = "LOGIN:NULL";
         if (send(clientfd, msg, strlen(msg), 0)) {
             cout << "Update Client Status--login" << endl;
+            list.clear();
         }
     }
 
