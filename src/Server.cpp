@@ -445,7 +445,7 @@ void Server::Run() {
                                     }
                                     if (!beBlocked) {
                                         if (clientList[toClientIndex].status == LOGIN) {
-                                            char msg[255];
+                                            char msg[BUFFER_SIZE];
 
                                             strcpy(msg, "Send:");
                                             strcat(msg, fromClient);
@@ -498,7 +498,7 @@ void Server::Run() {
                                         if (!beBlocked) {
                                             if (clientList[i].status == LOGIN) {
 
-                                                char msg[255];
+                                                char msg[BUFFER_SIZE];
 
                                                 strcpy(msg, "Send:");
                                                 strcat(msg, fromClient);
@@ -519,27 +519,30 @@ void Server::Run() {
                                                 Relay(string(fromClient), string("255.255.255.255"), message);
                                             }
                                         }
-                                        clientList[fromClientIndex].send++;
+//                                        clientList[fromClientIndex].send++;
                                     }
                                 }
+                                clientList[fromClientIndex].send++;
+
                             } else if (strcmp(sign, "BLOCK") == 0) {
                                 if (params.size() <= 1) {
                                     perror("Unexpected params");
                                 }
-                                char *blockIp = params[1];
+                                string blockIp = string(params[1]);
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *fromClient = inet_ntoa(client_addr.sin_addr);
                                 map<string, vector<struct info> >::iterator iter;
                                 iter = blockList.find(fromClient);
+
+                                struct info blockInfo;
+                                blockInfo.ip = blockIp;
+
                                 if (iter != blockList.end()) {
                                     vector<info> blockClients = iter->second;
-                                    struct info blockInfo;
-                                    blockInfo.ip = string(blockIp);
+
                                     blockClients.push_back(blockInfo);
                                 } else {
                                     vector<info> blockClients;
-                                    struct info blockInfo;
-                                    blockInfo.ip = string(blockIp);
                                     blockClients.push_back(blockInfo);
                                     blockList.insert(pair<string, vector<info> >(fromClient, blockClients));
                                 }

@@ -178,7 +178,7 @@ void Client::Refresh() {
 }
 
 void Client::Send(string ip, char *message) {
-    char msg[255];
+    char msg[BUFFER_SIZE];
     strcpy(msg, "SEND:");
     strcat(msg, (char *) ip.data());
     strcat(msg, ",");
@@ -192,7 +192,7 @@ void Client::Send(string ip, char *message) {
 }
 
 void Client::Broadcast(string message) {
-    char msg[255];
+    char msg[BUFFER_SIZE];
     strcpy(msg, "BROADCAST:");
     strcat(msg, (char *) message.data());
     cout << "MSG : " << msg << endl;
@@ -205,7 +205,7 @@ void Client::Broadcast(string message) {
 }
 
 void Client::Block(string ip) {
-    char msg[255];
+    char msg[256];
     strcpy(msg, "BLOCK:");
     strcat(msg, (char *) ip.data());
     if (send(clientfd, msg, strlen(msg), 0)) {
@@ -217,7 +217,7 @@ void Client::Block(string ip) {
 }
 
 void Client::Unblock(string ip) {
-    char msg[255];
+    char msg[256];
     strcpy(msg, "UNBLOCK:");
     strcat(msg, (char *) ip.data());
     if (send(clientfd, msg, strlen(msg), 0)) {
@@ -404,7 +404,15 @@ void Client::Run() {
                                             }
                                         }
                                         if (beSend) {
-                                            Send(string(params[1]), params[2]);
+                                            string message;
+                                            for (int index = 2; index < params.size(); index++) {
+                                                message += string(params[index]);
+                                                if (index != params.size() - 1) {
+                                                    message += " ";
+                                                }
+                                            }
+
+                                            Send(string(params[1]), (char *) message.data());
                                         } else {
                                             CommandFail(cmd);
                                         }
