@@ -30,6 +30,7 @@ public:
     int port;
     string hostname;
     vector<info> list;
+    vector<info> blockList;
     int clientfd;
     enum clientStatus status;
     struct sockaddr_in client_addr;
@@ -48,9 +49,9 @@ public:
 
     void Refresh();
 
-    void Send(string ip, int clientPort, char *message);
+    void Send(string ip, char *message);
 
-    void Boardcast(string message);
+    void Broadcast(string message);
 
     void Block(string ip);
 

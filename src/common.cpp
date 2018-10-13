@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
+
 
 #include "../include/common.h"
 #include "../include/logger.h"
@@ -89,7 +91,7 @@ string GetClientHostname(char *clientIp) {
     return string(he->h_name);
 }
 
-vector<char*> Split(char* splitContent, const char* sep){
+vector<char *> Split(char *splitContent, const char *sep) {
     char *p;
     p = strtok(splitContent, sep);
     vector<char *> params;
@@ -99,4 +101,24 @@ vector<char*> Split(char* splitContent, const char* sep){
         p = strtok(NULL, sep);
     }
     return params;
+}
+
+
+bool ValidIp(string ip) {
+    struct sockaddr_in sa;
+    int result = inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
+    return result != 0 && result != -1;
+}
+
+bool ValidPort(string port) {
+    for (int i = 0; i < port.size(); i++) {
+        if (port[i] >= '0' && port[i] <= '9') {
+            continue;
+        } else {
+            return false;
+        }
+    }
+
+    int portInt = atoi(port.c_str());
+    return !(portInt < 0 || portInt > 65535);
 }

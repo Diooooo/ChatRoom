@@ -74,7 +74,7 @@ public:
 
     string ResponseDone(int sockfd);
 
-    int FindClient(string clientIp, int clientPort);
+    int FindClient(string clientIp);
 
     bool Send(int sockfd, char* msg);
 
