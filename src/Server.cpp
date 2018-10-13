@@ -430,7 +430,9 @@ void Server::Run() {
                                 int fromClientPort = (int)ntohs(client_addr.sin_port);
                                 int fromClientIndex = FindClient(string(fromClient), fromClientPort);
                                 for (int i = 0; i < clientList.size(); i++) {
+
                                     cout << "i:" << i << endl;
+
                                     if (clientList[i].status == LOGIN && i != fromClientIndex) {
 
                                         char msg[255];
