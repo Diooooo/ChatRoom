@@ -53,66 +53,84 @@ void Client::List() {
 
 void Client::Login(string ip, int serverPort) {
     if (status == OFFLINE) {
-        ConnectToHost((char *) ip.data(), serverPort);
+        clientfd = ConnectToHost((char *) ip.data(), serverPort);
     } else {
         char *msg = "LOGIN:NULL";
         if (send(clientfd, msg, strlen(msg), 0)) {
             cout << "Update Client Status--login" << endl;
         }
     }
-    while (1) {
-        char *buffer = (char *) malloc(sizeof(char) * BUFFER_SIZE);
-        memset(buffer, '\0', BUFFER_SIZE);
 
-        if (recv(clientfd, buffer, BUFFER_SIZE, 0) >= 0) {
-            cout << "Buffer:" << buffer << endl;
+    char *buffer = (char *) malloc(sizeof(char) * BUFFER_SIZE);
+    memset(buffer, '\0', BUFFER_SIZE);
 
-            const char *sep = ":,";
-            char *p;
-            p = strtok(buffer, sep);
-            char *sign = p;
+    if (recv(clientfd, buffer, BUFFER_SIZE, 0) >= 0) {
+        cout << "Buffer:" << buffer << endl;
 
-            cout << "sign:" << sign << endl;
-
-            vector<char *> params;
-            //read other params
-            while (p) {
-                params.push_back(p);
-                p = strtok(NULL, sep);
-            }
-            if (strcmp(sign, "List") == 0) {
-
-                cout << "receive list"<< endl;
-
-                if (params.size() >= 4) {
-                    struct info onlineClient;
-                    onlineClient.hostname = params[1];
-                    onlineClient.ip = params[2];
-                    onlineClient.port = atoi(params[3]);
-                    list.push_back(onlineClient);
-                }
-
-            } else if (strcmp(sign, "Msg") == 0) {
-
-                cout << "receive message" << endl;
-
-                //call Receive()
-                if (params.size() >= 3) {
-                    Received(string(params[1]), string(params[2]));
-                }
-
-            } else if (strcmp(sign, "Done") == 0) {
-
-                break;
+        vector<char *> params = Split(buffer, "\n");
+        for (int i = 0; i < params.size(); i++) {
+            if (strcmp(params[i], "List") == 0 || strcmp(params[i], "ListEnd") == 0 || strcmp(params[i], "Msg") == 0 ||
+                strcmp(params[i], "MsgEnd") == 0 || strcmp(params[i], "Done") == 0) {
+                continue;
             } else {
-                perror("Unexpected message");
-                break;
-            }
-            fflush(stdout);
-        }
-        fflush(stdout);
+                if (strstr(params[i], "List")) {
+                    vector<char *> listParams = Split(params[i], ",");
 
+                    struct info onlineClient;
+                    onlineClient.hostname = listParams[1];
+                    onlineClient.ip = listParams[2];
+                    onlineClient.port = atoi(listParams[3]);
+                    list.push_back(onlineClient);
+
+                }
+                if (strstr(params[i], "Msg")) {
+                    vector<char *> msgParams = Split(params[i], ",");
+                    Received(string(msgParams[1]), string(msgParams[2]));
+                }
+            }
+        }
+//        if (strcmp(sign, "List") == 0) {
+//
+//            cout << "receive list" << endl;
+//
+//            if (params.size() >= 2) {
+//                for (int i = 1; i < params.size() - 1; i++) {
+//                    char *p1 = strtok(params[i], ",");
+//                    char *p2 = strtok(NULL, ",");
+//                    char *p3 = strtok(NULL, ",");
+//                    struct info onlineClient;
+//                    onlineClient.hostname = p1;
+//                    onlineClient.ip = p2;
+//                    onlineClient.port = atoi(p3);
+//                    list.push_back(onlineClient);
+//                }
+//            }
+//
+//        } else if (strcmp(sign, "Msg") == 0) {
+//
+//            cout << "receive message" << endl;
+//
+//            //call Receive()
+//            if (params.size() >= 2) {
+//                for (int i = 1; i < params.size() - 1; i++) {
+//                    char *p1 = strtok(params[i], ",");
+//                    char *p2 = strtok(NULL, ",");
+//                    Received(string(p1), string(p2));
+//                }
+//            }
+//
+//        } else if (strcmp(sign, "Done") == 0) {
+//
+//            break;
+//        } else {
+//            perror("Unexpected message");
+//            break;
+//        }
+        fflush(stdout);
     }
+//    fflush(stdout);
+
+
     status = LOGIN;
     char *cmd = "LOGIN";
     cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
@@ -126,39 +144,30 @@ void Client::Refresh() {
     if (send(clientfd, msg, strlen(msg), 0)) {
         cout << "Refresh online clients" << endl;
     }
-    while (1) {
-        char *buffer = (char *) malloc(sizeof(char) * BUFFER_SIZE);
-        memset(buffer, '\0', BUFFER_SIZE);
+    char *buffer = (char *) malloc(sizeof(char) * BUFFER_SIZE);
+    memset(buffer, '\0', BUFFER_SIZE);
 
-        if (recv(clientfd, buffer, BUFFER_SIZE, 0) >= 0) {
-            if (strstr(buffer, "List")) {
-                //update list
-                list.clear();
+    if (recv(clientfd, buffer, BUFFER_SIZE, 0) >= 0) {
+        cout << "Buffer:" << buffer << endl;
+        list.clear();
+        vector<char *> params = Split(buffer, "\n");
+        for (int i = 0; i < params.size(); i++) {
+            if (strcmp(params[i], "List") == 0 || strcmp(params[i], "ListEnd") == 0) {
+                continue;
+            } else {
+                if (strstr(params[i], "List")) {
+                    vector<char *> listParams = Split(params[i], ",");
 
-                const char *sep = ":,";
-                char *p;
-                p = strtok(buffer, sep);
-                char *sign = p;
-                vector<char *> params;
-                //read other params
-                while (p) {
-                    params.push_back(p);
-                    p = strtok(NULL, sep);
-                }
-                if (params.size() >= 4) {
                     struct info onlineClient;
-                    onlineClient.hostname = params[1];
-                    onlineClient.ip = params[2];
-                    onlineClient.port = atoi(params[3]);
+                    onlineClient.hostname = listParams[1];
+                    onlineClient.ip = listParams[2];
+                    onlineClient.port = atoi(listParams[3]);
                     list.push_back(onlineClient);
                 }
-            } else if (strstr(buffer, "Done")) {
-                break;
-            } else {
-                perror("Unexpected message");
-                break;
+
             }
         }
+        fflush(stdout);
     }
     char *cmd = "REFRESH";
     cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
@@ -186,6 +195,7 @@ void Client::Send(string ip, int clientPort, char *message) {
 void Client::Boardcast(string message) {
     char *msg = "BOARDCAST:";
     strcat(msg, (char *) message.data());
+    cout << "MSG : " << msg << endl;
     if (send(clientfd, msg, strlen(msg), 0)) {
         cout << "Boardcast to all" << endl;
     }
@@ -249,37 +259,50 @@ void Client::SendFile(string ip, string filePath) {
 
 
 int Client::ConnectToHost(char *server_ip, int server_port) {
+    int fdsocket, len;
     struct sockaddr_in remote_server_addr;
+
+    fdsocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (fdsocket < 0)
+        perror("Failed to create socket");
+
+    client_addr.sin_family = AF_INET;
+    client_addr.sin_port =htons(port);
+    client_addr.sin_addr.s_addr = inet_addr((char*)ip.data());
+
+    if (bind(fdsocket, (struct sockaddr *) &client_addr, sizeof(client_addr))< 0){
+        perror("Bind failed!");
+    }
 
     bzero(&remote_server_addr, sizeof(remote_server_addr));
     remote_server_addr.sin_family = AF_INET;
     inet_pton(AF_INET, server_ip, &remote_server_addr.sin_addr);
     remote_server_addr.sin_port = htons(server_port);
 
-    if (connect(clientfd, (struct sockaddr *) &remote_server_addr, sizeof(remote_server_addr)) < 0)
+    if (connect(fdsocket, (struct sockaddr *) &remote_server_addr, sizeof(remote_server_addr)) < 0)
         perror("Connect failed");
 
-    return clientfd;
+    return fdsocket;
 }
 
 void Client::Run() {
     int head_socket, selret, sock_index = 0;
     fd_set master_list, watch_list;
 
-    clientfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (clientfd < 0)
-        perror("Create socket failed!");
-
-
-    cout << "Clientfd:" << clientfd << endl;
-
-    client_addr.sin_family = AF_INET;
-    client_addr.sin_addr.s_addr = inet_addr((char *) ip.data());
-    client_addr.sin_port = htons(port);
-    if (bind(clientfd, (struct sockaddr *) &client_addr, sizeof(client_addr)) < 0) {
-        printf("Bind failed!");
-        exit(0);
-    }
+//    clientfd = socket(AF_INET, SOCK_STREAM, 0);
+//    if (clientfd < 0)
+//        perror("Create socket failed!");
+//
+//
+//    cout << "Clientfd:" << clientfd << endl;
+//
+//    client_addr.sin_family = AF_INET;
+//    client_addr.sin_addr.s_addr = inet_addr((char *) ip.data());
+//    client_addr.sin_port = htons(port);
+//    if (bind(clientfd, (struct sockaddr *) &client_addr, sizeof(client_addr)) < 0) {
+//        printf("Bind failed!");
+//        exit(0);
+//    }
 
     FD_ZERO(&master_list);
     FD_ZERO(&watch_list);
@@ -393,11 +416,8 @@ void Client::Run() {
                         char *buffer = (char *) malloc(sizeof(char) * BUFFER_SIZE);
                         memset(buffer, '\0', BUFFER_SIZE);
 
-
-                        cout << "sock_index:" << sock_index << endl;
-
                         if (recv(sock_index, buffer, BUFFER_SIZE, 0) <= 0) {
-                            perror("Impossible");
+//                            perror("Impossible");
 
                         } else {
                             const char *sep = ":,";
