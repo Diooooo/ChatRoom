@@ -48,6 +48,7 @@ public:
 
     vector<struct info> clientList;
     map<string, vector<struct info> > blockList;
+    map<string, vector<struct relayInfo> > relayList;
 
     Server(int port);
 
@@ -63,7 +64,15 @@ public:
 
     void Blocked(string ip);
 
-    void Relay();
+    void Relay(string fromClient, string toClient, char *msg);
 
     void Run();
+
+    void ResponseList(int sockfd);
+
+    void ResponseRelayMsg(int sockfd, string clientIp);
+
+    void ResponseDone(int sockfd);
+
+    int FindClient(string clientIp);
 };

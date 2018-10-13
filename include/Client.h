@@ -24,6 +24,7 @@
 #define MSG_SIZE 256
 #define BUFFER_SIZE 256
 #define MAXCMD 500
+#define STDIN 0
 using namespace std;
 
 class Client {
@@ -34,6 +35,7 @@ public:
     vector<info> list;
     int clientfd;
     enum clientStatus status;
+    struct sockaddr_in client_addr;
 
     Client(int portNumber);
 
@@ -49,7 +51,7 @@ public:
 
     void Refresh();
 
-    void Send(string ip, int clientPort, char *msg);
+    void Send(string ip, int clientPort, char *message);
 
     void Boardcast(string message);
 
@@ -66,4 +68,6 @@ public:
     void SendFile(string ip, string filePath);
 
     void Run();
+    
+    int ConnectToHost(char *server_ip, int server_port);
 };

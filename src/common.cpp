@@ -81,7 +81,10 @@ void CommandFail(char *cmd) {
 string GetClientHostname(char *clientIp) {
     struct hostent *he;
     struct in_addr ipv4addr;
+    memset(&ipv4addr, 0, sizeof(ipv4addr));
     inet_pton(AF_INET, clientIp, &ipv4addr);
     he = gethostbyaddr(&ipv4addr, sizeof(ipv4addr), AF_INET);
+//    cout<<"get hostent"<<endl;
+//    cout<<he->h_name<<endl;
     return string(he->h_name);
 }
