@@ -168,7 +168,7 @@ string Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
 
             string msg("Msg\n");
             for (int i = 0; i < length; i++) {
-                msg+= "Msg,";
+                msg += "Msg,";
                 msg += relayMessage[i].ip;
                 msg += ",";
                 msg += relayMessage[i].msg;
@@ -481,26 +481,43 @@ void Server::Run() {
                                 int fromClientIndex = FindClient(string(fromClient));
                                 for (int i = 0; i < clientList.size(); i++) {
                                     if (i != fromClientIndex) {
-                                        if (clientList[i].status == LOGIN) {
 
-                                            char msg[255];
-
-                                            strcpy(msg, "Send:");
-                                            strcat(msg, fromClient);
-                                            strcat(msg, ",");
-                                            strcat(msg, message);
-                                            cout << msg << endl;
-                                            if (send(clientList[i].socketfd, msg, strlen(msg), 0)) {
-                                                cout << "Send online client: " << i + 1 << endl;
+                                        bool beBlocked = false;
+                                        // block issue
+                                        map<string, vector<struct info> >::iterator keyBlock = blockList.find(
+                                                clientList[i].ip);
+                                        if (keyBlock != blockList.end()) {
+                                            vector<info> blockClients = keyBlock->second;
+                                            for (int j = 0; j < blockClients.size(); j++) {
+                                                if (strcmp((char *) blockClients[j].ip.data(), fromClient) == 0) {
+                                                    beBlocked = true;
+                                                    break;
+                                                }
                                             }
+                                        }
+                                        if (!beBlocked) {
+                                            if (clientList[i].status == LOGIN) {
 
-                                        } else {
-                                            char *cmd = "RELAY";
-                                            cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
-                                            cse4589_print_and_log("msg from:%s, to:%s\n[msg]:%s\n", fromClient,
-                                                                  (char *) string("255.255.255.255").data(), message);
-                                            cse4589_print_and_log("[%s:END]\n", cmd);
-                                            Relay(string(fromClient), string("255.255.255.255"), message);
+                                                char msg[255];
+
+                                                strcpy(msg, "Send:");
+                                                strcat(msg, fromClient);
+                                                strcat(msg, ",");
+                                                strcat(msg, message);
+                                                cout << msg << endl;
+                                                if (send(clientList[i].socketfd, msg, strlen(msg), 0)) {
+                                                    cout << "Send online client: " << i + 1 << endl;
+                                                }
+
+                                            } else {
+                                                char *cmd = "RELAY";
+                                                cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
+                                                cse4589_print_and_log("msg from:%s, to:%s\n[msg]:%s\n", fromClient,
+                                                                      (char *) string("255.255.255.255").data(),
+                                                                      message);
+                                                cse4589_print_and_log("[%s:END]\n", cmd);
+                                                Relay(string(fromClient), string("255.255.255.255"), message);
+                                            }
                                         }
                                         clientList[fromClientIndex].send++;
                                     }
