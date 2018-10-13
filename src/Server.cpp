@@ -560,11 +560,10 @@ void Server::Run() {
                                 map<string, vector<struct info> >::iterator iter;
                                 iter = blockList.find(fromClient);
                                 if (iter != blockList.end()) {
-                                    vector<info> blockClients = iter->second;
-                                    for (vector<info>::iterator it = blockClients.begin();
-                                         it != blockClients.end(); it++) {
+                                    for (vector<info>::iterator it = iter->second.begin();
+                                         it != iter->second.end(); it++) {
                                         if (strcmp((char *) it->ip.data(), unblockIp) == 0) {
-                                            blockClients.erase(it);
+                                            iter->second.erase(it);
                                             break;
                                         }
                                     }
