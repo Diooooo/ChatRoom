@@ -39,7 +39,7 @@ struct info {
 
 
 struct relayInfo {
-    char *ip;
-    char *msg;
+    std::string ip;
+    std::string msg;
 };
 #endif

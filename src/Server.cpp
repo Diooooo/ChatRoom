@@ -95,8 +95,8 @@ void Server::Blocked(string ip) {
 
 void Server::Relay(string fromClient, string toClient, char *msg) {
     struct relayInfo relay;
-    relay.ip = (char *) fromClient.data();
-    relay.msg = msg;
+    relay.ip = fromClient;
+    relay.msg = string(msg);
     map<string, vector<struct relayInfo> >::iterator iter;
     iter = relayList.find(toClient);
     if (iter != relayList.end()) {
@@ -158,31 +158,28 @@ string Server::ResponseList(int sockfd) {
 string Server::ResponseRelayMsg(int sockfd, string clientIp, int clientPort) {
     map<string, vector<struct relayInfo> >::iterator iter;
     iter = relayList.find(clientIp);
-    cout << "S1" << endl;
+    cout << "ResponseRelayMsg()" << endl;
     if (iter != relayList.end()) {
         int clientIndex = FindClient(string(clientIp));
-        cout << "clientindex:" << clientIndex << endl;
 
         if (clientIndex != -1) {
             vector<relayInfo> relayMessage = iter->second;
             int length = relayMessage.size();
-            char msg[BUFFER_SIZE];
-            memset(msg, '\0', sizeof(msg));
-            strcpy(msg, "Msg\n");
+
+            string msg("Msg\n");
             for (int i = 0; i < length; i++) {
-                strcat(msg, "Msg");
-                strcat(msg, ",");
-                strcat(msg, relayMessage[i].ip);
-                strcat(msg, ",");
-                strcat(msg, relayMessage[i].msg);
-                strcat(msg, "\n");
+                msg+= "Msg,";
+                msg += relayMessage[i].ip;
+                msg += ",";
+                msg += relayMessage[i].msg;
+                msg += "\n";
 //                if (send(sockfd, msg, strlen(msg), 0)) {
 //                    cout << "Send online client: " << i + 1 << endl;
 //                }
                 clientList[clientIndex].receive++;
             }
-            strcat(msg, "MsgEnd\n");
-            return string(msg);
+            msg += "MsgEnd\n";
+            return msg;
         }
     }
     return "";
