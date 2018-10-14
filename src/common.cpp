@@ -122,3 +122,21 @@ bool ValidPort(string port) {
     int portInt = atoi(port.c_str());
     return !(portInt < 0 || portInt > 65535);
 }
+
+bool SendData(int sockfd, char *msg) {
+    unsigned long total = 0;
+    unsigned long bytes_remaining = strlen(msg);
+    ssize_t n = 0;
+    cout << "send " << strlen(msg) << " bytes: " << msg << endl;
+
+    while (total < strlen(msg)) {
+        n = send(sockfd, msg + total, bytes_remaining, 0);
+        if (n == -1) {
+            break;
+        }
+        total += n;
+        bytes_remaining -= n;
+    }
+
+    return n != -1;
+}

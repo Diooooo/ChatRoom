@@ -24,4 +24,6 @@ bool ValidIp(std::string ip);
 
 bool ValidPort(std::string port);
 
+bool SendData(int sockfd, char* msg);
+
 #endif //BILINSHI_COMMON_H

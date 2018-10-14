@@ -108,23 +108,6 @@ void Server::Relay(string fromClient, string toClient, char *msg) {
     }
 }
 
-bool Server::Send(int sockfd, char *msg) {
-    unsigned long total = 0;
-    unsigned long bytes_remaining = strlen(msg);
-    ssize_t n = 0;
-    cout << "send " << strlen(msg) << " bytes: " << msg << endl;
-
-    while (total < strlen(msg)) {
-        n = send(sockfd, msg + total, bytes_remaining, 0);
-        if (n == -1) {
-            break;
-        }
-        total += n;
-        bytes_remaining -= n;
-    }
-
-    return n != -1;
-}
 
 
 string Server::ResponseList(int sockfd) {
@@ -313,7 +296,7 @@ void Server::Run() {
                         message += string(relayMsg);
                         message += string(responseDone);
 
-                        Send(fdaccept, (char *) message.data());
+                        SendData(fdaccept, (char *) message.data());
 //                        char message[BUFFER_SIZE];
 //                        strcpy(message, listMsg);
 //                        if (relayMsg != NULL) {
@@ -398,7 +381,7 @@ void Server::Run() {
                                 message += string(relayMsg);
                                 message += string(responseDone);
 
-                                Send(sock_index, (char *) message.data());
+                                SendData(sock_index, (char *) message.data());
 
                             } else if (strcmp(sign, "LOGOUT") == 0) {
                                 //update client status
@@ -414,7 +397,7 @@ void Server::Run() {
 
                             } else if (strcmp(sign, "REFRESH") == 0) {
                                 string listMsg = ResponseList(sock_index);
-                                Send(sock_index, (char *) listMsg.data());
+                                SendData(sock_index, (char *) listMsg.data());
                             } else if (strcmp(sign, "SEND") == 0) {
                                 if (params.size() <= 2) {
                                     perror("Unexpected params");
@@ -452,7 +435,10 @@ void Server::Run() {
                                             strcat(msg, ",");
                                             strcat(msg, message);
                                             cout << msg << endl;
-                                            if (send(clientList[toClientIndex].socketfd, msg, strlen(msg), 0)) {
+//                                            if (send(clientList[toClientIndex].socketfd, msg, strlen(msg), 0)) {
+//                                                cout << "Send online client: " << toClientIndex + 1 << endl;
+//                                            }
+                                            if (SendData(clientList[toClientIndex].socketfd, msg)) {
                                                 cout << "Send online client: " << toClientIndex + 1 << endl;
                                             }
 
@@ -505,7 +491,10 @@ void Server::Run() {
                                                 strcat(msg, ",");
                                                 strcat(msg, message);
                                                 cout << msg << endl;
-                                                if (send(clientList[i].socketfd, msg, strlen(msg), 0)) {
+//                                                if (send(clientList[i].socketfd, msg, strlen(msg), 0)) {
+//                                                    cout << "Send online client: " << i + 1 << endl;
+//                                                }
+                                                if (SendData(clientList[i].socketfd, msg)) {
                                                     cout << "Send online client: " << i + 1 << endl;
                                                 }
 

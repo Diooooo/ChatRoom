@@ -183,9 +183,10 @@ void Client::Send(string ip, char *message) {
     strcat(msg, (char *) ip.data());
     strcat(msg, ",");
     strcat(msg, message);
-    if (send(clientfd, msg, strlen(msg), 0)) {
-        cout << "Send to " << ip << endl;
-    }
+    SendData(clientfd, msg);
+//    if (send(clientfd, msg, strlen(msg), 0)) {
+//        cout << "Send to " << ip << endl;
+//    }
     char *cmd = "SEND";
     cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
     cse4589_print_and_log("[%s:END]\n", cmd);
@@ -497,7 +498,9 @@ void Client::Run() {
 
                         if (recv(sock_index, buffer, BUFFER_SIZE, 0) <= 0) {
 //                            perror("Impossible");
-
+                            cout<<"Goodbye Server"<<endl;
+                            close(clientfd);
+                            exit(0);
                         } else {
                             const char *sep = ":,";
                             char *p;
