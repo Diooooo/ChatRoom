@@ -518,8 +518,8 @@ void Client::Run() {
                                     vector<char *> paramMsg = Split(buffer, ",");
                                     string message;
                                     for (int index = 1; index < paramMsg.size(); index++) {
-                                        message += string(params[index]);
-                                        if (index != params.size() - 1) {
+                                        message += string(paramMsg[index]);
+                                        if (index != paramMsg.size() - 1) {
                                             message += ",";
                                         }
                                     }

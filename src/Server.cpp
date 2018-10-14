@@ -406,8 +406,8 @@ void Server::Run() {
                                 vector<char *> paramMsg = Split(buffer, ",");
                                 string message;
                                 for (int index = 1; index < paramMsg.size(); index++) {
-                                    message += string(params[index]);
-                                    if (index != params.size() - 1) {
+                                    message += string(paramMsg[index]);
+                                    if (index != paramMsg.size() - 1) {
                                         message += ",";
                                     }
                                 }
@@ -466,7 +466,11 @@ void Server::Run() {
                                 if (params.size() <= 1) {
                                     perror("Unexpected params");
                                 }
-                                char *message = params[1];
+//                                char *message = params[1];
+
+                                vector<char *> paramMsg = Split(buffer, ":");
+                                string message = string(paramMsg[1]);
+
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *fromClient = inet_ntoa(client_addr.sin_addr);
 
@@ -496,7 +500,7 @@ void Server::Run() {
                                                 strcpy(msg, "Send:");
                                                 strcat(msg, fromClient);
                                                 strcat(msg, ",");
-                                                strcat(msg, message);
+                                                strcat(msg, (char *) message.data());
                                                 cout << msg << endl;
 //                                                if (send(clientList[i].socketfd, msg, strlen(msg), 0)) {
 //                                                    cout << "Send online client: " << i + 1 << endl;
@@ -510,9 +514,10 @@ void Server::Run() {
                                                 cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
                                                 cse4589_print_and_log("msg from:%s, to:%s\n[msg]:%s\n", fromClient,
                                                                       (char *) string("255.255.255.255").data(),
-                                                                      message);
+                                                                      (char *) message.data());
                                                 cse4589_print_and_log("[%s:END]\n", cmd);
-                                                Relay(string(fromClient), string("255.255.255.255"), message);
+                                                Relay(string(fromClient), string("255.255.255.255"),
+                                                      (char *) message.data());
                                             }
                                         }
 //                                        clientList[fromClientIndex].send++;
