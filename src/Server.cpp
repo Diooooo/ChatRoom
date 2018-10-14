@@ -109,7 +109,6 @@ void Server::Relay(string fromClient, string toClient, char *msg) {
 }
 
 
-
 string Server::ResponseList(int sockfd) {
     int length = clientList.size();
     char msg[BUFFER_SIZE];
@@ -403,7 +402,15 @@ void Server::Run() {
                                     perror("Unexpected params");
                                 }
                                 char *toClient = params[1];
-                                char *message = params[2];
+//                                char *message = params[2];
+                                vector<char *> paramMsg = Split(buffer, ",");
+                                string message;
+                                for (int index = 1; index < paramMsg.size(); index++) {
+                                    message += string(params[index]);
+                                    if (index != params.size() - 1) {
+                                        message += ",";
+                                    }
+                                }
 
                                 int toClientIndex = FindClient(string(toClient));
 
@@ -433,7 +440,7 @@ void Server::Run() {
                                             strcpy(msg, "Send:");
                                             strcat(msg, fromClient);
                                             strcat(msg, ",");
-                                            strcat(msg, message);
+                                            strcat(msg, (char *) message.data());
                                             cout << msg << endl;
 //                                            if (send(clientList[toClientIndex].socketfd, msg, strlen(msg), 0)) {
 //                                                cout << "Send online client: " << toClientIndex + 1 << endl;
@@ -447,9 +454,9 @@ void Server::Run() {
                                             char *cmd = "RELAY";
                                             cse4589_print_and_log("[%s:SUCCESS]\n", cmd);
                                             cse4589_print_and_log("msg from:%s, to:%s\n[msg]:%s\n", fromClient,
-                                                                  toClient, message);
+                                                                  toClient, (char *) message.data());
                                             cse4589_print_and_log("[%s:END]\n", cmd);
-                                            Relay(string(fromClient), string(toClient), message);
+                                            Relay(string(fromClient), string(toClient), (char *) message.data());
                                         }
                                     }
                                     clientList[fromClientIndex].send++;

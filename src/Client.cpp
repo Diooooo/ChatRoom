@@ -498,7 +498,7 @@ void Client::Run() {
 
                         if (recv(sock_index, buffer, BUFFER_SIZE, 0) <= 0) {
 //                            perror("Impossible");
-                            cout<<"Goodbye Server"<<endl;
+                            cout << "Goodbye Server" << endl;
                             close(clientfd);
                             exit(0);
                         } else {
@@ -515,7 +515,15 @@ void Client::Run() {
 
                             if (strcmp(sign, "Send") == 0) {
                                 if (params.size() >= 3) {
-                                    Received(string(params[1]), string(params[2]));
+                                    vector<char *> paramMsg = Split(buffer, ",");
+                                    string message;
+                                    for (int index = 1; index < paramMsg.size(); index++) {
+                                        message += string(params[index]);
+                                        if (index != params.size() - 1) {
+                                            message += ",";
+                                        }
+                                    }
+                                    Received(string(params[1]), message);
                                 }
                             }
                         }
