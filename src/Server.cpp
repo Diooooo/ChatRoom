@@ -469,7 +469,13 @@ void Server::Run() {
 //                                char *message = params[1];
 
                                 vector<char *> paramMsg = Split(buffer, ":");
-                                string message = string(paramMsg[1]);
+                                string message;
+                                for (int index = 1; index < paramMsg.size(); index++) {
+                                    message += string(paramMsg[index]);
+                                    if (index != paramMsg.size() - 1) {
+                                        message += ":";
+                                    }
+                                }
 
                                 getpeername(sock_index, (struct sockaddr *) &client_addr, &caddr_len);
                                 char *fromClient = inet_ntoa(client_addr.sin_addr);
